@@ -1,6 +1,6 @@
 data:
   batch_size: 512
-  data_root_dir: data
+  data_root_dir: home1/BTP/pg_aa_1/data
   dataset: vqa_2.0
   image_depth_first: false
   image_fast_reader: true
