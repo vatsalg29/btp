@@ -70,7 +70,7 @@ def print_eval(prepare_data_fun, out_label):
     pkl_res_file = os.path.join(snapshot_dir, "best_model_predict_%s.pkl" % out_label)
     out_file = os.path.join(snapshot_dir, "best_model_predict_%s.json" % out_label)
 
-    data_set_test = prepare_data_fun(**cfg['data'], **cfg['model'], verbose=False)
+    data_set_test = prepare_data_fun(**cfg['data'], **cfg['model'], verbose=True)
     data_reader_test = DataLoader(data_set_test, shuffle=False,
                                   batch_size=cfg.data.batch_size, num_workers=cfg.data.num_workers)
     ans_dic = data_set_test.answer_dict
