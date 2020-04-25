@@ -129,7 +129,7 @@ class vqa_dataset(Dataset):
                  image_feat_directories, verbose=False, **data_params):
         super(vqa_dataset, self).__init__()
         if imdb_file.endswith('.npy'):
-            imdb = np.load(imdb_file)
+            imdb = np.load(imdb_file,allow_pickle=True)
         else:
             raise TypeError('unknown imdb format.')
         self.verbose = verbose

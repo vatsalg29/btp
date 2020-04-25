@@ -29,11 +29,11 @@ __C.exp_name = "baseline"
 # --------------------------------------------------------------------------- #
 __C.data = AttrDict()
 __C.data.dataset = "vqa_2.0"
-__C.data.num_workers = 5
+__C.data.num_workers = 8
 __C.data.batch_size = 512
 __C.data.image_depth_first = False
 __C.data.question_max_len = 14
-__C.data.image_fast_reader = True
+__C.data.image_fast_reader = False
 __C.data.image_max_loc = 100
 
 __C.data.data_root_dir = "data"
