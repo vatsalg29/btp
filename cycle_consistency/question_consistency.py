@@ -35,7 +35,8 @@ class SentenceDecoder(nn.Module):
                                   scale_grad_by_freq=False)
 
         embed_init_path = cfg.model.question_embedding[0]["par"]["embedding_init_file"]
-        embed_init = np.load(embed_init_path)
+        embed_path = os.path.join(cfg.data.data_root_dir, embed_init_path)
+        embed_init = np.load(embed_path)
 
         #initialize start and end at extremes
         se_init = np.zeros([2, embed_size])
