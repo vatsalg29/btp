@@ -5,7 +5,7 @@ data:
   image_depth_first: false
   image_fast_reader: true
   image_feat_test:
-  - rcnn_10_100/vqa/test2015
+  - rcnn_10_100/vqa
   image_feat_train:
   - rcnn_10_100/vqa/train2014
   - rcnn_10_100/vqa/val2014
