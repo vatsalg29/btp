@@ -84,6 +84,7 @@ def one_stage_train(
     best_val_precision = 0.0
     writer = SummaryWriter(log_dir)
     best_iter = i_iter
+    best_epoch = 0
     iepoch = start_epoch
     start = timeit.default_timer()
     confusion_mat = np.zeros((2, 2))
