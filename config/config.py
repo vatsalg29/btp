@@ -102,7 +102,7 @@ __C.model.image_embedding_models.append(top_down_bottom_up)
 # failure prediction options:
 # --------------------------------------------------------------------------- #
 failure_predictor = AttrDict()
-failure_predictor.hidden_1 = 0
+failure_predictor.hidden_1 = 1024
 failure_predictor.hidden_2 = 512
 failure_predictor.answer_hidden_size = 256
 failure_predictor.dropout = 0.5

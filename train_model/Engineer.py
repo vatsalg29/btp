@@ -83,6 +83,7 @@ def one_stage_train(
     best_val_accuracy = 0
     best_val_precision = 0.0
     writer = SummaryWriter(log_dir)
+    best_epoch = 0
     best_iter = i_iter
     iepoch = start_epoch
     start = timeit.default_timer()

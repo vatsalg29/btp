@@ -95,6 +95,7 @@ def prepare_model(num_vocab_txt, num_choices, **model_config):
 
     is_failure_prediction = model_config.get('failure_predictor', {}).get('hidden_1', 0)
     is_question_consistency = model_config.get('question_consistency', {}).get('hidden_size', 0)
+    print("Question consistency is" + str(is_question_consistency) + str(is_failure_prediction))
 
     if is_question_consistency and not is_failure_prediction:
 
