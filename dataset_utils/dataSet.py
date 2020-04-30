@@ -235,6 +235,7 @@ class vqa_dataset(Dataset):
 
     def __getitem__(self, idx):
         input_seq = np.zeros((self.T_encoder), np.int32)
+        implied_seq = np.zeros((self.T_encoder), np.int32)
         idx += self.first_element_idx
         iminfo = self.imdb[idx]
         question_inds = (
@@ -242,6 +243,14 @@ class vqa_dataset(Dataset):
         seq_length = len(question_inds)
         read_len = min(seq_length, self.T_encoder)
         input_seq[:read_len] = question_inds[:read_len]
+        
+        # Load implied question (Insert code to choose randomly and get tokens)
+        imp_ques_tokens = np.random.choice(list(iminfo['qa_implications'].items()))[1][0:1]
+        imp_question_inds = (
+            [self.vocab_dict.word2idx(w) for w in imp_ques_tokens])
+        imp_seq_length = len(imp_question_inds)
+        imp_read_len = min(imp_seq_length, self.T_encoder)
+        implied_seq[:imp_read_len] = imp_question_inds[:imp_read_len]
 
         image_file_name = self.imdb[idx]['feature_path']
         image_feats, image_boxes, image_loc = (
