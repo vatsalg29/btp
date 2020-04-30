@@ -8,3 +8,4 @@ results/*
 boards/*
 .DS_Store
 orig_data/*
+*.ipynb_*
