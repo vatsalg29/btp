@@ -266,10 +266,18 @@ def one_stage_train(
                         == answer_scores_cuda.max(1)[1]
                     )
 
+#                 if allowed_indices.sum() > -1:
+#                     cycle_vqa_loss = cfg.training_parameters.cc_lambda * loss_criterion(
+#                         cycle_return_dict["logits"][allowed_indices],
+#                         cycle_batch["ans_scores"][allowed_indices].cuda(),
+#                     )
+                    
+                # Compare with Implied Answer ground truth value
+        
                 if allowed_indices.sum() > -1:
                     cycle_vqa_loss = cfg.training_parameters.cc_lambda * loss_criterion(
                         cycle_return_dict["logits"][allowed_indices],
-                        cycle_batch["ans_scores"][allowed_indices].cuda(),
+                        cycle_batch["imp_ans_scores"][allowed_indices].cuda(),
                     )
 
                     # perform backward pass
@@ -788,6 +796,16 @@ def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
     input_images = batch["image_feat_batch"]
     input_txt_variable = Variable(input_text_seqs.type(torch.LongTensor))
     input_txt_variable = input_txt_variable.cuda() if use_cuda else input_txt_variable
+    
+    # Load Implied Question Ground Truth
+    imp_seqs = batch["imp_seq_batch"]
+    imp_seq_variable = Variable(imp_seqs.type(torch.LongTensor))
+    imp_seq_variable = imp_seq_variable.cuda() if use_cuda else imp_seq_variable
+    
+    # Load Implied Answer Ground Truth
+    imp_ans_gt = batch["imp_ans_scores"]
+    imp_ans_variable = Variable(imp_ans_gt)
+    imp_ans_variable = imp_ans_variable.cuda() if use_cuda else imp_ans_variable
 
     if isinstance(input_images, list):
         input_images = input_images[0]
@@ -821,6 +839,8 @@ def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
         input_question_variable=input_txt_variable,
         image_dim_variable=image_dim_variable,
         image_feat_variables=image_feat_variables,
+        imp_gt_ques = imp_seq_variable,
+        imp_gt_ans = imp_ans_variable,
         batch=batch,
     )
 

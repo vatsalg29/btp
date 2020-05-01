@@ -7,12 +7,12 @@ data:
   - detectron_fix_100/fc6/vqa/train2014
   - detectron_fix_100/fc6/vqa/val2014
   imdb_file_val:
-  - imdb/imdb_minival2014.npy
+  - imdb_imps/imdb_minival2014.npy
   imdb_file_test:
   - imdb/imdb_test2015.npy
   imdb_file_train:
-  - imdb/imdb_train2014.npy
-  - imdb/imdb_val2train2014.npy
+  - imdb_imps/imdb_train2014.npy
+  - imdb_imps/imdb_val2train2014.npy
   image_feat_val:
   - detectron_fix_100/fc6/vqa/val2014
   image_feat_test:
@@ -83,7 +83,7 @@ optimizer:
     eps: 1.0e-08
     lr: 0.005
     weight_decay: 0
-run: train+predict
+run: train+val
 training_parameters:
   fp_lr: 0.01
   qc_lr: 0.0005

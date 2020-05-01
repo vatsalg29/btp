@@ -165,6 +165,8 @@ class vqa_multi_modal_with_qc_cycle(vqa_multi_modal_model):
                 image_feat_variables,
                 input_question_variable,
                 image_dim_variable,
+                imp_gt_ques,
+                imp_gt_ans,
                 input_answers=None, **kwargs):
         return_dict = super().forward(image_feat_variables,
                                       input_question_variable,
@@ -173,16 +175,23 @@ class vqa_multi_modal_with_qc_cycle(vqa_multi_modal_model):
                                       **kwargs)
         self.feat_dict = return_dict
 
+#         q_gt_input = (kwargs['batch'],
+#                       self.model_intermediates['question_input'].clone().detach())
+        
         q_gt_input = (kwargs['batch'],
-                      self.model_intermediates['question_input'].clone().detach())
+                      imp_gt_ques.clone().detach())
 
         if self.attended:
             img_feat_input = self.model_intermediates['image_embeddings'].clone().detach()
         else:
             img_feat_input = torch.mean(self.model_intermediates['raw_image_embeddings'].clone().detach(), 1)
 
+#         qc_return_dict = self.question_consistency(img_feat_input,
+#                                                    return_dict['logits'].clone().detach(),
+#                                                    q_gt_input)
+
         qc_return_dict = self.question_consistency(img_feat_input,
-                                                   return_dict['logits'].clone().detach(),
+                                                   imp_gt_ans.clone().detach(),
                                                    q_gt_input)
 
         return {'logits': return_dict['logits'],

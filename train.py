@@ -200,12 +200,12 @@ if __name__ == '__main__':
                     snapshot_dir=snapshot_dir, log_dir=boards_dir, start_epoch=i_epoch, i_iter=i_iter,
                     scheduler=scheduler)
 
-    print("BEGIN PREDICTING ON TEST/VAL set...")
+#     print("BEGIN PREDICTING ON TEST/VAL set...")
 
-    if 'predict' in cfg.run:
-        print_eval(prepare_test_data_set, "test")
-    if cfg.run == 'train+val':
-        print_eval(prepare_eval_data_set, "val")
+#     if 'predict' in cfg.run:
+#         print_eval(prepare_test_data_set, "test")
+#     if cfg.run == 'train+val':
+#         print_eval(prepare_eval_data_set, "val")
 
     end = timeit.default_timer()
     total_time = (end - start) / 3600.0

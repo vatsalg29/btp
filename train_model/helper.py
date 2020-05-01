@@ -42,6 +42,7 @@ def run_model(current_model, data_reader, UNK_idx=0):
 
     start = timeit.default_timer()
     for i, batch in enumerate(data_reader):
+        print(i)
         if (i+1) % 100 == 0:
             end = timeit.default_timer()
             time = end - start

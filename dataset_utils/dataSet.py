@@ -244,18 +244,14 @@ class vqa_dataset(Dataset):
         read_len = min(seq_length, self.T_encoder)
         input_seq[:read_len] = question_inds[:read_len]
         
-        # Load implied question (Insert code to choose randomly and get tokens)
-        imp_ques_ans = np.random.choice(list(iminfo['qa_implications'].items()))[1]
-        imp_ques_tokens = imp_ques_ans[0:1]
-        imp_question_inds = (
-            [self.vocab_dict.word2idx(w) for w in imp_ques_tokens])
-        imp_seq_length = len(imp_question_inds)
-        imp_read_len = min(imp_seq_length, self.T_encoder)
-        implied_seq[:imp_read_len] = imp_question_inds[:imp_read_len]
-
-        image_file_name = self.imdb[idx]['feature_path']
-        image_feats, image_boxes, image_loc = (
-            self._get_image_features_(image_file_name))
+#         # Load implied question (Insert code to choose randomly and get tokens)
+#         imp_ques_ans = np.random.choice(list(iminfo['qa_implications'].items()))[1]
+#         imp_ques_tokens = imp_ques_ans[0:1]
+#         imp_question_inds = (
+#             [self.vocab_dict.word2idx(w) for w in imp_ques_tokens])
+#         imp_seq_length = len(imp_question_inds)
+#         imp_read_len = min(imp_seq_length, self.T_encoder)
+#         implied_seq[:imp_read_len] = imp_question_inds[:imp_read_len]
 
         answer = None
         valid_answers_idx = np.zeros((10), np.int32)
@@ -278,24 +274,44 @@ class vqa_dataset(Dataset):
 
             answer_idx = self.answer_dict.word2idx(answer)
             
-         # Load implied answer
+
+        # Load implied question
+        if self.load_answer:
+            import random
+            #t = random.choice(list(iminfo['qa_tokens'].items()))
+            #print(idx)
+            imp_idx = np.random.choice(len(iminfo['qa_tokens'][answer]))
+            #print(t)
+            #imp_idx = np.random.choice(len(iminfo['qa_tokens'][t[0]]))
+            imp_ques_tokens = iminfo['qa_tokens'][answer][imp_idx]
+            imp_question_inds = (
+                [self.vocab_dict.word2idx(w) for w in imp_ques_tokens])
+            imp_seq_length = len(imp_question_inds)
+            imp_read_len = min(imp_seq_length, self.T_encoder)
+            implied_seq[:imp_read_len] = imp_question_inds[:imp_read_len]
+
+        image_file_name = self.imdb[idx]['feature_path']
+        image_feats, image_boxes, image_loc = (
+            self._get_image_features_(image_file_name))
+            
         imp_answer = None
         imp_valid_answers_idx = np.zeros((10), np.int32)
         imp_valid_answers_idx.fill(-1)
         imp_answer_scores = np.zeros(self.answer_dict.num_vocab, np.float32)
         if self.load_answer:
-            imp_answer = imp_ques_ans[1:2]
+            imp_answer = iminfo['qa_answers'][answer][imp_idx]
             imp_answer_idx = self.answer_dict.word2idx(imp_answer)
             imp_valid_answers_idx.fill(imp_answer_idx)
+            imp_valid_answers = iminfo['valid_answers']
+            for i in range(0,len(imp_valid_answers)):
+                imp_valid_answers[i] = imp_answer
+            ans_idx = (
+                    [self.answer_dict.word2idx(ans) for ans in imp_valid_answers])
             imp_answer_scores = (
-                    compute_answer_scores(imp_valid_answers_idx,
+                    compute_answer_scores(ans_idx,
                                           self.answer_dict.num_vocab,
                                           self.answer_dict.UNK_idx))
             
-        
-        
-        
-
         if self.load_gt_layout:
             gt_layout_tokens = iminfo['gt_layout_tokens']
             if self.prune_filter_module:
@@ -306,11 +322,15 @@ class vqa_dataset(Dataset):
                 gt_layout_tokens = [t for t in gt_layout_tokens if t]
             gt_layout = np.array(self.assembler.module_list2tokens(
                 gt_layout_tokens, self.T_decoder))
-
-        sample = dict(input_seq_batch=input_seq,
+        
+        if self.load_answer:
+            sample = dict(input_seq_batch=input_seq,
                       seq_length_batch=seq_length,
-                     imp_seq_batch = implied_seq,
-                     imp_seq_length_batch = imp_seq_length)
+                         imp_seq_batch = implied_seq,
+                         imp_seq_length_batch = imp_seq_length)
+        else:
+            sample = dict(input_seq_batch=input_seq,
+                      seq_length_batch=seq_length)
 
         if 'test2015' in image_file_name:
             id_start_index = image_file_name.find('5_') + 2
