@@ -228,11 +228,15 @@ class vqa_multi_modal_with_fpqc_cycle(vqa_multi_modal_with_qc_cycle):
                 image_feat_variables,
                 input_question_variable,
                 image_dim_variable,
+                imp_gt_ques,
+                imp_gt_ans,
                 input_answers=None, **kwargs):
 
         return_dict = super().forward(image_feat_variables,
                                       input_question_variable,
                                       image_dim_variable,
+                                      imp_gt_ques,
+                                      imp_gt_ans,
                                       input_answers=input_answers,
                                       **kwargs)
 

@@ -234,6 +234,7 @@ class vqa_dataset(Dataset):
         return image_feats_return, image_boxes, image_loc
 
     def __getitem__(self, idx):
+        
         input_seq = np.zeros((self.T_encoder), np.int32)
         implied_seq = np.zeros((self.T_encoder), np.int32)
         idx += self.first_element_idx
@@ -293,7 +294,8 @@ class vqa_dataset(Dataset):
         image_file_name = self.imdb[idx]['feature_path']
         image_feats, image_boxes, image_loc = (
             self._get_image_features_(image_file_name))
-            
+        
+
         imp_answer = None
         imp_valid_answers_idx = np.zeros((10), np.int32)
         imp_valid_answers_idx.fill(-1)
@@ -302,16 +304,34 @@ class vqa_dataset(Dataset):
             imp_answer = iminfo['qa_answers'][answer][imp_idx]
             imp_answer_idx = self.answer_dict.word2idx(imp_answer)
             imp_valid_answers_idx.fill(imp_answer_idx)
-            imp_valid_answers = iminfo['valid_answers']
+            imp_valid_answers = iminfo['valid_answers'].copy() #bug fix :p
             for i in range(0,len(imp_valid_answers)):
                 imp_valid_answers[i] = imp_answer
+
             ans_idx = (
                     [self.answer_dict.word2idx(ans) for ans in imp_valid_answers])
             imp_answer_scores = (
                     compute_answer_scores(ans_idx,
                                           self.answer_dict.num_vocab,
                                           self.answer_dict.UNK_idx))
-            
+
+        else:
+            ch = np.random.choice(2)
+            imp_answer = 'yes' if ch == 0 else 'no'       
+            imp_answer_idx = self.answer_dict.word2idx(imp_answer)
+            imp_valid_answers_idx.fill(imp_answer_idx)
+            imp_valid_answers = []
+            for i in range(10):
+                imp_valid_answers.append(imp_answer)
+
+            ans_idx = (
+                    [self.answer_dict.word2idx(ans) for ans in imp_valid_answers])
+            imp_answer_scores = (
+                    compute_answer_scores(ans_idx,
+                                          self.answer_dict.num_vocab,
+                                          self.answer_dict.UNK_idx))
+
+        
         if self.load_gt_layout:
             gt_layout_tokens = iminfo['gt_layout_tokens']
             if self.prune_filter_module:
@@ -330,7 +350,9 @@ class vqa_dataset(Dataset):
                          imp_seq_length_batch = imp_seq_length)
         else:
             sample = dict(input_seq_batch=input_seq,
-                      seq_length_batch=seq_length)
+                      seq_length_batch=seq_length,
+                          imp_seq_batch = input_seq,
+                         imp_seq_length_batch = seq_length)
 
         if 'test2015' in image_file_name:
             id_start_index = image_file_name.find('5_') + 2
@@ -354,6 +376,7 @@ class vqa_dataset(Dataset):
 
         if self.load_answer:
             sample['answer_label_batch'] = answer_idx
+        if imp_answer_idx is not None:
             sample['imp_answer_label_batch'] = imp_answer_idx
         if self.load_gt_layout:
             sample['gt_layout_batch'] = gt_layout
@@ -373,5 +396,5 @@ class vqa_dataset(Dataset):
         # output question_id, image_id, question, answer,valid_answers,
         if self.verbose:
             sample['verbose_info'] = iminfo
-
+            
         return sample
