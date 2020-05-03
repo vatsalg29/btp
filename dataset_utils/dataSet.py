@@ -314,7 +314,6 @@ class vqa_dataset(Dataset):
                     compute_answer_scores(ans_idx,
                                           self.answer_dict.num_vocab,
                                           self.answer_dict.UNK_idx))
-
         else:
             ch = np.random.choice(2)
             imp_answer = 'yes' if ch == 0 else 'no'       

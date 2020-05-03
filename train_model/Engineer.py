@@ -101,13 +101,14 @@ def one_stage_train(
             if i_iter > max_iter:
                 break
 
-            scheduler.step(i_iter)
 
             answer_scores = batch["ans_scores"]
             answer_scores_cuda = batch["ans_scores"].cuda()
             n_sample = answer_scores.size(0)
             n_sample_tot += n_sample
             myOptimizer.zero_grad()
+            
+            
 
             add_graph = False
 
@@ -208,6 +209,7 @@ def one_stage_train(
                 else:
                     raise NotImplementedError
             myOptimizer.step()
+            scheduler.step(i_iter)
 
             if (
                 cfg.model.question_consistency.cycle
@@ -263,7 +265,7 @@ def one_stage_train(
                 if cfg["model"]["question_consistency"]["vqa_gating"]:
                     allowed_indices = (
                         cycle_return_dict["logits"].max(1)[1]
-                        == answer_scores_cuda.max(1)[1]
+                        == cycle_batch["imp_ans_scores"].cuda().max(1)[1]
                     )
 
 #                 if allowed_indices.sum() > -1:
@@ -509,18 +511,23 @@ def one_stage_eval_model(
     vocab, ans_vocab = obtain_vocabs(cfg)
 
     # Make dict to store generated questions
-    gq_dict = {"annotations": [], "answers": []}
+    gq_dict = {"annotations": [], "ques_answers": []}
 
     def store_questions(sampled_ids, batch):
         sampled_ids = sampled_ids.data.cpu().numpy()
+        orig_q = batch["input_seq_batch"].data.cpu().numpy()
+        orig_questions = [
+            [vocab[idx] for idx in orig_q[j]] for j in range(len(orig_q))
+        ]
         questions = [
             [vocab[idx] for idx in sampled_ids[j]] for j in range(len(sampled_ids))
         ]
         images = batch["image_id"]
         orig_answers = batch["answer_label_batch"].data.cpu().numpy()
-        for jdx, (q, img, oa) in enumerate(zip(questions, images, orig_answers)):
-            gq_dict["annotations"] += [{"image_id": int(img), "caption": " ".join(q)}]
-            gq_dict["answers"] += [{"image_id": int(img), "caption": ans_vocab[oa]}]
+        imp_answers = batch["imp_answer_label_batch"].data.cpu().numpy()
+        for jdx, (q, oq, img, oa, ia) in enumerate(zip(questions, orig_questions, images, orig_answers, imp_answers)):
+            gq_dict["annotations"] += [{"image_id": int(img), "imp_ans": ans_vocab[ia], "gen_ques": " ".join(q)}]
+            gq_dict["ques_answers"] += [{"image_id": int(img), "orig_ques": " ".join(oq), "orig_ans": ans_vocab[oa]}]
 
     confusion_mat = (
         np.zeros((len(threshold), 2, 2))

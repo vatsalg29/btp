@@ -31,7 +31,7 @@ model:
     dropout: 0.5
   question_consistency:
     attended: True
-    vqa_gating: True
+    vqa_gating: False
     cycle: True
     activation_iter: 2500
     hidden_size: 512
@@ -83,7 +83,7 @@ optimizer:
     eps: 1.0e-08
     lr: 0.005
     weight_decay: 0
-run: train+val
+run: train+predict
 training_parameters:
   fp_lr: 0.01
   qc_lr: 0.0005
@@ -97,7 +97,7 @@ training_parameters:
   - 18000
   - 22000
   max_grad_l2_norm: 0.25
-  max_iter: 42000
+  max_iter: 25000
   report_interval: 200
   snapshot_interval: 2000
   wu_factor: 0.2
