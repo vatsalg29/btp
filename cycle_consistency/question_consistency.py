@@ -7,6 +7,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 import numpy as np
 import os
 
@@ -84,7 +85,7 @@ class SentenceDecoder(nn.Module):
         mixed_feat = mixed_feat.unsqueeze(1)
         return mixed_feat
 
-    def forward(self, features, answer_logits, batch_tuple):
+    def forward(self, features, answer_logits, batch_tuple,flags):
         mixed_feat = self.fuse_features(features, answer_logits)
 
         captions = batch_tuple[1]
@@ -105,13 +106,22 @@ class SentenceDecoder(nn.Module):
         # Add 2 element to the lengths
         # Only needed if manually appending start and end vectors for original vocabulary
         lengths += 2 
-
+                
         s_lengths, indices = torch.sort(lengths, descending=True)
         s_lengths = s_lengths.cpu().numpy().tolist()
         s_lengths = [s if s < self.max_seg_length else self.max_seg_length for s in s_lengths]
+        
         captions = captions[indices]
         mixed_feat = mixed_feat[indices]
-
+        flags = flags[indices] # sort flags too!
+       
+        ## proceed only on flagged data! 
+        new_idx = torch.cuda.LongTensor([i for i in range(0,len(flags)) if flags[i]])
+        
+        captions = captions[new_idx]
+        mixed_feat = mixed_feat[new_idx]
+        s_lengths = [s_lengths[i] for i in range(0,len(s_lengths)) if flags[i] ]
+        
         embeddings = self.embed(captions)
         embeddings = torch.cat([mixed_feat, embeddings], 1)
         packed = pack_padded_sequence(embeddings, s_lengths, batch_first=True) 
@@ -119,19 +129,22 @@ class SentenceDecoder(nn.Module):
         targets = target_tuple[0] 
         hiddens, _ = self.lstm(packed)
         outputs = self.linear(hiddens[0])
-
-        loss = self.compute_loss(outputs, targets)
+        
+        loss = self.compute_loss(outputs, targets) #calculated only on flagged questions
+        
         if not self.training:
-            sampled_ids = self.sample(features, answer_logits)
+            sampled_ids = self.sample(features, answer_logits) 
         else:
             sampled_ids = self.sample(features, answer_logits)
-
+        
+        # no need to send shuffled flags since new samples(original ordering) are taken
         return {'q_token_pred': outputs,
                 'qc_loss': loss,
                 'q_token_gt': targets,
                 'sampled_ids': sampled_ids,
                 'answer_logits': answer_logits,
-                'indices': indices}
+                'indices': indices
+               }
 
     def sample(self, features, answer_logits, states=None):
         sampled_ids = []

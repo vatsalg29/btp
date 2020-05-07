@@ -167,6 +167,7 @@ class vqa_multi_modal_with_qc_cycle(vqa_multi_modal_model):
                 image_dim_variable,
                 imp_gt_ques,
                 imp_gt_ans,
+                imp_flag,
                 input_answers=None, **kwargs):
         return_dict = super().forward(image_feat_variables,
                                       input_question_variable,
@@ -192,7 +193,8 @@ class vqa_multi_modal_with_qc_cycle(vqa_multi_modal_model):
 
         qc_return_dict = self.question_consistency(img_feat_input,
                                                    imp_gt_ans.clone().detach(),
-                                                   q_gt_input)
+                                                   q_gt_input,
+                                                   imp_flag.clone().detach())
 
         return {'logits': return_dict['logits'],
                 'qc_return_dict': qc_return_dict}

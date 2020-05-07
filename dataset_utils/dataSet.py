@@ -239,6 +239,7 @@ class vqa_dataset(Dataset):
         implied_seq = np.zeros((self.T_encoder), np.int32)
         idx += self.first_element_idx
         iminfo = self.imdb[idx]
+        
         question_inds = (
             [self.vocab_dict.word2idx(w) for w in iminfo['question_tokens']])
         seq_length = len(question_inds)
@@ -277,7 +278,7 @@ class vqa_dataset(Dataset):
             
 
         # Load implied question
-        if self.load_answer:
+        if self.load_answer and 'qa_tokens' in iminfo:
             import random
             #t = random.choice(list(iminfo['qa_tokens'].items()))
             #print(idx)
@@ -295,12 +296,12 @@ class vqa_dataset(Dataset):
         image_feats, image_boxes, image_loc = (
             self._get_image_features_(image_file_name))
         
-
+        # Load Implied Answer
         imp_answer = None
         imp_valid_answers_idx = np.zeros((10), np.int32)
         imp_valid_answers_idx.fill(-1)
         imp_answer_scores = np.zeros(self.answer_dict.num_vocab, np.float32)
-        if self.load_answer:
+        if self.load_answer and 'qa_answers' in iminfo:
             imp_answer = iminfo['qa_answers'][answer][imp_idx]
             imp_answer_idx = self.answer_dict.word2idx(imp_answer)
             imp_valid_answers_idx.fill(imp_answer_idx)
@@ -329,6 +330,13 @@ class vqa_dataset(Dataset):
                     compute_answer_scores(ans_idx,
                                           self.answer_dict.num_vocab,
                                           self.answer_dict.UNK_idx))
+            
+        ########### Load Flag ########################
+        imp_flag = None
+        if self.load_answer and 'is_imps' in iminfo:
+            imp_flag = iminfo['is_imps']
+        else:
+            imp_flag = True
 
         
         if self.load_gt_layout:
@@ -342,7 +350,7 @@ class vqa_dataset(Dataset):
             gt_layout = np.array(self.assembler.module_list2tokens(
                 gt_layout_tokens, self.T_decoder))
         
-        if self.load_answer:
+        if self.load_answer and 'qa_tokens' in iminfo:
             sample = dict(input_seq_batch=input_seq,
                       seq_length_batch=seq_length,
                          imp_seq_batch = implied_seq,
@@ -390,6 +398,10 @@ class vqa_dataset(Dataset):
 
         if image_boxes is not None:
             sample['image_boxes'] = image_boxes
+            
+        ############# Store Flag #################
+        if imp_flag is not None:
+            sample['flag'] = imp_flag
 
         # used for error analysis and debug,
         # output question_id, image_id, question, answer,valid_answers,

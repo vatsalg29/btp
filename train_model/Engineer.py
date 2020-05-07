@@ -123,7 +123,9 @@ def one_stage_train(
                 _return_dict = one_stage_run_model(batch, myModel, add_graph, log_dir)
                 logit_res = _return_dict["logits"]
                 qc_return_dict = _return_dict["qc_return_dict"]
-                qc_loss = torch.mean(qc_return_dict["qc_loss"], 0)
+                qc_loss = qc_return_dict["qc_loss"]
+               
+                qc_loss = torch.mean(qc_loss, 0)  #calculated only on flagged data
 
             elif is_failure_prediction and is_question_consistency:
                 _return_dict = one_stage_run_model(batch, myModel, add_graph, log_dir)
@@ -187,9 +189,9 @@ def one_stage_train(
                 )
                 confusion_mat += batch_cm
 
-            print("{}_{}: QC: {:.4f} FP: {:.4f} T: {:.4f}".format(
-                iepoch, i_iter, float(qc_loss), float(fp_loss), float(total_loss)
-            ))
+#             print("{}_{}: QC: {:.4f} FP: {:.4f} T: {:.4f}".format(
+#                 iepoch, i_iter, float(qc_loss), float(fp_loss), float(total_loss)
+#             ))
 
             total_loss.backward()
             if max_grad_l2_norm is not None:
@@ -216,6 +218,7 @@ def one_stage_train(
                 and i_iter > cfg["model"]["question_consistency"]["activation_iter"]
             ):
                 cycle_batch = {}
+                
                 for _k, _v in batch.items():
                     cycle_batch[_k] = _v.clone()
                 generated_questions = qc_return_dict["sampled_ids"].clone()
@@ -241,11 +244,11 @@ def one_stage_train(
                         detached_g_q
                     ).sum(1)
 
-                    detached_o_q = batch["input_seq_batch"].long().cuda()
+                    detached_o_q = batch["imp_seq_batch"].long().cuda()
                     detached_o_emb = myModel.question_consistency.embed(
                         detached_o_q
                     ).sum(1)
-
+                    
                     cosine_similarity = F.cosine_similarity(
                         detached_g_emb, detached_o_emb
                     )
@@ -253,15 +256,15 @@ def one_stage_train(
                         cosine_similarity
                         > cfg["model"]["question_consistency"]["gating_th"]
                     )
-                    print(
-                        "Allowed Batches {}".format(allowed_indices.sum().cpu().item())
-                    )
+#                     print(
+#                         "Allowed Batches {}".format(allowed_indices.sum().cpu().item())
+#                     )
                 else:
                     allowed_indices = torch.ones(len(generated_questions)).long()
 
                 cycle_batch["input_seq_batch"] = generated_questions
                 cycle_return_dict = one_stage_run_model(cycle_batch, myModel)
-
+                
                 if cfg["model"]["question_consistency"]["vqa_gating"]:
                     allowed_indices = (
                         cycle_return_dict["logits"].max(1)[1]
@@ -274,8 +277,9 @@ def one_stage_train(
 #                         cycle_batch["ans_scores"][allowed_indices].cuda(),
 #                     )
                     
-                # Compare with Implied Answer ground truth value
-        
+                ############### Compare with Implied Answer ground truth value #######################
+                allowed_indices = allowed_indices*batch["flag"].cuda() 
+                
                 if allowed_indices.sum() > -1:
                     cycle_vqa_loss = cfg.training_parameters.cc_lambda * loss_criterion(
                         cycle_return_dict["logits"][allowed_indices],
@@ -284,11 +288,11 @@ def one_stage_train(
 
                     # perform backward pass
                     cycle_vqa_loss.backward()
-                    print(
-                        "CL: {:.4f} Pass: [{}/512]".format(
-                            cycle_vqa_loss, allowed_indices.sum().cpu().item()
-                        )
-                    )
+#                     print(
+#                         "CL: {:.4f} Pass: [{}/512]".format(
+#                             cycle_vqa_loss, allowed_indices.sum().cpu().item()
+#                         )
+#                     )
                     myOptimizer.step()
 
             scores = torch.sum(
@@ -321,12 +325,12 @@ def one_stage_train(
                 )
                 sys.stdout.flush()
 
-                cm_stat_dict = print_classification_report(
-                    confusion_mat, threshold=0.0, return_dict=True
-                )
+#                 cm_stat_dict = print_classification_report(
+#                     confusion_mat, threshold=0.0, return_dict=True
+#                 )
 
-                for k, v in cm_stat_dict.items():
-                    writer.add_scalar("train_" + k, v, i_iter)
+#                 for k, v in cm_stat_dict.items():
+#                     writer.add_scalar("train_" + k, v, i_iter)
 
                 writer.add_scalar("train_loss", cur_loss, i_iter)
                 writer.add_scalar("train_score", accuracy, i_iter)
@@ -522,11 +526,15 @@ def one_stage_eval_model(
         questions = [
             [vocab[idx] for idx in sampled_ids[j]] for j in range(len(sampled_ids))
         ]
+        gt_q = batch["imp_seq_batch"].data.cpu().numpy()
+        gt_questions = [
+            [vocab[idx] for idx in gt_q[j]] for j in range(len(gt_q))
+        ]
         images = batch["image_id"]
         orig_answers = batch["answer_label_batch"].data.cpu().numpy()
         imp_answers = batch["imp_answer_label_batch"].data.cpu().numpy()
-        for jdx, (q, oq, img, oa, ia) in enumerate(zip(questions, orig_questions, images, orig_answers, imp_answers)):
-            gq_dict["annotations"] += [{"image_id": int(img), "imp_ans": ans_vocab[ia], "gen_ques": " ".join(q)}]
+        for jdx, (q, gtq, oq, img, oa, ia) in enumerate(zip(questions, gt_questions, orig_questions, images, orig_answers, imp_answers)):
+            gq_dict["annotations"] += [{"image_id": int(img), "imp_ans": ans_vocab[ia], "gen_ques": " ".join(q), "gt_gen_ques": " ".join(gtq)}]
             gq_dict["ques_answers"] += [{"image_id": int(img), "orig_ques": " ".join(oq), "orig_ans": ans_vocab[oa]}]
 
     confusion_mat = (
@@ -617,13 +625,13 @@ def one_stage_eval_model(
             )
             confusion_mat += batch_cm
 
-        cm_stat_dict = print_classification_report(
-            confusion_mat, threshold=0.0, return_dict=True
-        )
+#         cm_stat_dict = print_classification_report(
+#             confusion_mat, threshold=0.0, return_dict=True
+#         )
 
-        for k, v in cm_stat_dict.items():
-            if not v != v:
-                writer.add_scalar("val_" + k, v, i_iter)
+#         for k, v in cm_stat_dict.items():
+#             if not v != v:
+#                 writer.add_scalar("val_" + k, v, i_iter)
 
         val_score_tot += predicted_scores
         val_sample_tot += n_sample
@@ -813,6 +821,11 @@ def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
     imp_ans_gt = batch["imp_ans_scores"]
     imp_ans_variable = Variable(imp_ans_gt)
     imp_ans_variable = imp_ans_variable.cuda() if use_cuda else imp_ans_variable
+    
+    ############## Load Implication Flag ##################
+    imp_flag = batch["flag"]
+    imp_flag_var = Variable(imp_flag)
+    imp_flag_var = imp_flag_var.cuda() if use_cuda else imp_flag_var
 
     if isinstance(input_images, list):
         input_images = input_images[0]
@@ -848,6 +861,7 @@ def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
         image_feat_variables=image_feat_variables,
         imp_gt_ques = imp_seq_variable,
         imp_gt_ans = imp_ans_variable,
+        imp_flag = imp_flag_var,
         batch=batch,
     )
 
