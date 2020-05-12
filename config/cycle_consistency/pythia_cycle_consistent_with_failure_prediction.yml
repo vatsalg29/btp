@@ -1,18 +1,18 @@
 data:
   batch_size: 256
-  data_root_dir: /private/home/meetshah/cb/data
+  data_root_dir: /home1/BTP/pg_aa_1/btp/data
   num_workers: 15
   image_depth_first: false
   image_feat_train:
   - detectron_fix_100/fc6/vqa/train2014
   - detectron_fix_100/fc6/vqa/val2014
   imdb_file_val:
-  - imdb/imdb_minival2014.npy
+  - imdb_imps/imdb_minival2014.npy
   imdb_file_test:
   - imdb/imdb_test2015.npy
   imdb_file_train:
-  - imdb/imdb_train2014.npy
-  - imdb/imdb_val2train2014.npy
+  - imdb_imps/imdb_train2014.npy
+  - imdb_imps/imdb_val2train2014.npy
   image_feat_val:
   - detectron_fix_100/fc6/vqa/val2014
   image_feat_test:
@@ -47,7 +47,7 @@ model:
   - modal_combine:
       method: non_linear_elmt_multiply
       par:
-        dropout: 0
+        dropout: 0.2
         hidden_size: 5000
     normalization: softmax
     transform:
@@ -58,12 +58,12 @@ model:
   image_feature_encoding:
   - method: finetune_faster_rcnn_fpn_fc7
     par:
-      weights_file: /private/home/meetshah/cb/data/detectron_fix_100/fc6/fc7_w.pkl
-      bias_file: /private/home/meetshah/cb/data/detectron_fix_100/fc6/fc7_b.pkl
+      weights_file: /home1/BTP/pg_aa_1/btp/data/detectron_fix_100/fc6/fc7_w.pkl
+      bias_file: /home1/BTP/pg_aa_1/btp/data/detectron_fix_100/fc6/fc7_b.pkl
   modal_combine:
     method: non_linear_elmt_multiply
     par:
-      dropout: 0
+      dropout: 0.2
       hidden_size: 5000
   question_embedding:
   - method: att_que_embed
@@ -72,9 +72,9 @@ model:
       LSTM_layer: 1
       conv1_out: 512
       conv2_out: 2
-      dropout: 0
+      dropout: 0.2
       embedding_dim: 300
-      embedding_init_file: /private/home/meetshah/cb/data/vqa2.0_glove.6B.300d.txt.npy
+      embedding_init_file: /home1/BTP/pg_aa_1/btp/data/vqa2.0_glove.6B.300d.txt.npy
       kernel_size: 1
       padding: 0
 optimizer:

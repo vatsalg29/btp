@@ -186,12 +186,27 @@ class vqa_multi_modal_with_qc_cycle(vqa_multi_modal_model):
             img_feat_input = self.model_intermediates['image_embeddings'].clone().detach()
         else:
             img_feat_input = torch.mean(self.model_intermediates['raw_image_embeddings'].clone().detach(), 1)
+            
+        ques_feat_input = self.model_intermediates['question_embeddings'].clone().detach()
+            
+        ######## Original #######
 
 #         qc_return_dict = self.question_consistency(img_feat_input,
 #                                                    return_dict['logits'].clone().detach(),
-#                                                    q_gt_input)
+#                                                    q_gt_input,
+#                                                    imp_flag.clone().detach())
 
-        qc_return_dict = self.question_consistency(img_feat_input,
+        ############ VQG ours#########
+
+#         qc_return_dict = self.question_consistency(img_feat_input,
+#                                                    imp_gt_ans.clone().detach(),
+#                                                    q_gt_input,
+#                                                    imp_flag.clone().detach())
+
+
+        ############### QG ########## (Passing Q and A' as info and A_imp_gt as answer and Q_imp_gt to compare with)
+        qc_return_dict = self.question_consistency(ques_feat_input,
+                                                   return_dict['logits'].clone().detach(),
                                                    imp_gt_ans.clone().detach(),
                                                    q_gt_input,
                                                    imp_flag.clone().detach())

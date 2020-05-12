@@ -1,24 +1,24 @@
 data:
   batch_size: 256
-  data_root_dir: /home1/BTP/pg_aa_1/btp/data
+  data_root_dir: /home1/BTP/pg_aa_1/
   num_workers: 15
   image_depth_first: false
   image_feat_train:
-  - detectron_fix_100/fc6/vqa/train2014
-  - detectron_fix_100/fc6/vqa/val2014
+  - btp/data/detectron_fix_100/fc6/vqa/train2014
   imdb_file_val:
-  - imdb_imps/imdb_minival2014.npy
+  - btp/data/imdb/imdb_just_impsminival2014.npy
+  - btp/data/imdb/imdb_just_impsval2train2014.npy
   imdb_file_test:
-  - imdb/imdb_test2015.npy
+  - btp/data/imdb/imdb_test2015.npy
   imdb_file_train:
-  - imdb_imps/imdb_train2014.npy
-  - imdb_imps/imdb_val2train2014.npy
+  - btp/data/imdb_imps/imdb_train2014.npy
   image_feat_val:
-  - detectron_fix_100/fc6/vqa/val2014
+  - btp/data/detectron_fix_100/fc6/vqa/val2014
+  - btp/data/detectron_fix_100/fc6/vqa/val2014
   image_feat_test:
-  - detectron_fix_100/fc6/vqa/test2015
+  - btp/data/detectron_fix_100/fc6/vqa/test2015
   image_fast_reader: False
-  vocab_answer_file: answers_vqa_larger.txt
+  vocab_answer_file: btp/data/answers_vqa_larger.txt
   vocab_question_file: vocabulary_vqa.txt
   image_max_loc: 100
 exp_name: baseline
@@ -33,8 +33,9 @@ model:
     attended: True
     vqa_gating: False
     cycle: True
-    activation_iter: 2500
-    hidden_size: 512
+    gating_th: 0.9
+    activation_iter: 5500 
+    hidden_size: 1024
     embed_size: 300
     ans_embed_hidden_size: 1000
     image_feature_in_size: 2048
@@ -74,7 +75,7 @@ model:
       conv2_out: 2
       dropout: 0
       embedding_dim: 300
-      embedding_init_file: /home1/BTP/pg_aa_1/btp/data/vqa2.0_glove.6B.300d.txt.npy
+      embedding_init_file: /home1/BTP/pg_aa_1/vqa2.0_glove.6B.300d.txt.npy
       kernel_size: 1
       padding: 0
 optimizer:
@@ -83,12 +84,13 @@ optimizer:
     eps: 1.0e-08
     lr: 0.005
     weight_decay: 0
-run: train+predict
+run: train
 training_parameters:
   fp_lr: 0.01
   qc_lr: 0.0005
   fp_lambda: 1.5
-  qc_lambda: 0.5
+  qc_lambda: 1.0
+  cc_lambda: 1.0
   clip_norm_mode: all
   lr_ratio: 0.1
   lr_steps:

@@ -26,6 +26,7 @@ class SentenceDecoder(nn.Module):
         hidden_size = kwargs.get('hidden_size', 512)
         ans_embed_hidden_size = kwargs.get('ans_embed_hidden_size', 1000)
         image_feature_in_size = kwargs.get('image_feature_in_size', 2048)
+        question_embed_size = kwargs.get('question_embed_size', 2048)
 # Add 2 for <start> and <end>
         q_vocab, a_vocab = self._get_vocabs()
         n_ans = len(a_vocab)
@@ -46,18 +47,28 @@ class SentenceDecoder(nn.Module):
         embed_init = np.concatenate([embed_init, se_init], 0)
         self.embed.weight.data.copy_(torch.from_numpy(embed_init))
 
-        self.img_embed = nn.Sequential(nn.Linear(image_feature_in_size, embed_size),
-                                       nn.BatchNorm1d(embed_size, momentum=0.01))
+#         self.img_embed = nn.Sequential(nn.Linear(image_feature_in_size, embed_size),
+#                                        nn.BatchNorm1d(embed_size, momentum=0.01))
 
         self.a_embed = nn.Sequential(nn.ReLU(),
                                      nn.Linear(n_ans, ans_embed_hidden_size),
                                      nn.ReLU(),
                                      nn.Linear(ans_embed_hidden_size, embed_size),
                                      nn.ReLU())
+        
+        self.imp_a_embed = nn.Sequential(nn.ReLU(),
+                                         nn.Linear(n_ans, ans_embed_hidden_size),
+                                         nn.ReLU(),
+                                         nn.Linear(ans_embed_hidden_size, embed_size),
+                                         nn.ReLU())
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.lstm = nn.LSTM(embed_size, hidden_size, 1, batch_first=True)
         self.linear = nn.Linear(hidden_size, vocab_size)
+        
+        self.linear2 = nn.Linear(question_embed_size,embed_size)
+        self.linear3 = nn.Linear(2*embed_size,embed_size)
+        
         self.max_seg_length = 14
         self.start_idx = vocab_size - 2
         self.end_idx = vocab_size - 1
@@ -75,23 +86,34 @@ class SentenceDecoder(nn.Module):
     def compute_loss(self, pred, gt):
         return self.loss_fn(pred, gt)
 
-    def fuse_features(self, img_ft, ans_ft):
-        img_ft = img_ft.to(self.img_embed[0].weight.device)
-        ans_ft = ans_ft.to(self.a_embed[1].weight.device)
-        img_feat = self.img_embed(img_ft)
-        answer_embed = self.a_embed(ans_ft)
+    def fuse_features(self, q, a, imp_ans):
+        
+        a = a.to(self.a_embed[1].weight.device)
+        imp_ans = imp_ans.to(self.imp_a_embed[1].weight.device)
+        
+        answer_embed = self.a_embed(a)
+        imp_ans_embed = self.imp_a_embed(imp_ans)
+        question_embedding = self.linear2(q)
+        
+#         qa_pair = torch.cat([question_embedding, answer_embed], 1)
+#         qa_embed = self.linear3(qa_pair)
 
-        mixed_feat = answer_embed + img_feat
+        qa_embed = question_embedding + answer_embed
+        
+        mixed_feat = imp_ans_embed+qa_embed
+        mixed_feat += torch.randn(mixed_feat.size()) #uncomment for noise
+        
         mixed_feat = mixed_feat.unsqueeze(1)
         return mixed_feat
 
-    def forward(self, features, answer_logits, batch_tuple,flags):
-        mixed_feat = self.fuse_features(features, answer_logits)
+    def forward(self, q, a, answer_logits, batch_tuple,flags):
+        
+        mixed_feat = self.fuse_features(q, a, answer_logits)
 
         captions = batch_tuple[1]
         lengths = batch_tuple[0]['seq_length_batch'].clone().detach()
         captions = captions.to(self.embed.weight.device)
-
+                
         # Add <end> token to captions
         for i in range(len(captions)):
             if lengths[i] <= self.max_seg_length -1:
@@ -133,9 +155,9 @@ class SentenceDecoder(nn.Module):
         loss = self.compute_loss(outputs, targets) #calculated only on flagged questions
         
         if not self.training:
-            sampled_ids = self.sample(features, answer_logits) 
+            sampled_ids = self.sample(q, a, answer_logits) 
         else:
-            sampled_ids = self.sample(features, answer_logits)
+            sampled_ids = self.sample(q, a, answer_logits)
         
         # no need to send shuffled flags since new samples(original ordering) are taken
         return {'q_token_pred': outputs,
@@ -146,9 +168,9 @@ class SentenceDecoder(nn.Module):
                 'indices': indices
                }
 
-    def sample(self, features, answer_logits, states=None):
+    def sample(self, q, a, answer_logits, states=None):
         sampled_ids = []
-        inputs = self.fuse_features(features, answer_logits)
+        inputs = self.fuse_features(q, a, answer_logits)
 
         """ 
         To introduce noise in inference

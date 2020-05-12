@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument("--num_workers",type=int, help="num_workers in dataLoader, default 0", default=5)
     parser.add_argument("--json_only", action='store_true', help="flag for only need json result")
     parser.add_argument("--use_val",action='store_true',help="flag for using val data for test")
+    parser.add_argument("--store_result",action='store_true',help="flag for storing val data in json")
     
 
     arguments = parser.parse_args()
@@ -73,11 +74,16 @@ if __name__ == '__main__':
     my_model.eval()
 
     print("BEGIN TESTING")
-    question_ids, soft_max_result = run_model(my_model, data_reader_test, ans_dic.UNK_idx)
-
-    pkl_res_file = args.out_prefix + ".pkl" if not args.json_only else None
-
-    print_result(question_ids, soft_max_result, ans_dic, out_file, args.json_only, pkl_res_file)
+    
+    if args.store_result:
+        question_ids, soft_max_result = run_model(my_model, data_reader_test, ans_dic.UNK_idx)
+        pkl_res_file = args.out_prefix + ".pkl" if not args.json_only else None
+        print_result(question_ids, soft_max_result, ans_dic, out_file, args.json_only, pkl_res_file)
+        
+    else:    
+        if args.use_val:
+            acc, ns, _ = one_stage_eval_model(data_reader_test, my_model)
+            print("Validation accuracy : %.6f" % acc)
 
     print("DONE")
 

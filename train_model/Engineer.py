@@ -271,14 +271,15 @@ def one_stage_train(
                         == cycle_batch["imp_ans_scores"].cuda().max(1)[1]
                     )
 
+                ############### Compare with Implied Answer ground truth value #######################
+                allowed_indices = allowed_indices*batch["flag"].cuda() 
+                
 #                 if allowed_indices.sum() > -1:
 #                     cycle_vqa_loss = cfg.training_parameters.cc_lambda * loss_criterion(
 #                         cycle_return_dict["logits"][allowed_indices],
 #                         cycle_batch["ans_scores"][allowed_indices].cuda(),
 #                     )
                     
-                ############### Compare with Implied Answer ground truth value #######################
-                allowed_indices = allowed_indices*batch["flag"].cuda() 
                 
                 if allowed_indices.sum() > -1:
                     cycle_vqa_loss = cfg.training_parameters.cc_lambda * loss_criterion(
@@ -389,7 +390,7 @@ def one_stage_train(
                         best_epoch = iepoch
                         best_iter = i_iter
                         best_model_snapshot_file = os.path.join(
-                            snapshot_dir, "best_model.pth"
+                            snapshot_dir, "best_model_finetuned.pth"
                         )
                         shutil.copy(model_snapshot_file, best_model_snapshot_file)
 
@@ -399,7 +400,7 @@ def one_stage_train(
                         best_epoch = iepoch
                         best_iter = i_iter
                         best_model_snapshot_file = os.path.join(
-                            snapshot_dir, "best_model.pth"
+                            snapshot_dir, "best_model_finetuned.pth"
                         )
                         shutil.copy(model_snapshot_file, best_model_snapshot_file)
 
@@ -533,6 +534,9 @@ def one_stage_eval_model(
         images = batch["image_id"]
         orig_answers = batch["answer_label_batch"].data.cpu().numpy()
         imp_answers = batch["imp_answer_label_batch"].data.cpu().numpy()
+#         verbose_info = batch['verbose_info']
+#         q_ids = verbose_info['question_id'].cpu().numpy()
+        
         for jdx, (q, gtq, oq, img, oa, ia) in enumerate(zip(questions, gt_questions, orig_questions, images, orig_answers, imp_answers)):
             gq_dict["annotations"] += [{"image_id": int(img), "imp_ans": ans_vocab[ia], "gen_ques": " ".join(q), "gt_gen_ques": " ".join(gtq)}]
             gq_dict["ques_answers"] += [{"image_id": int(img), "orig_ques": " ".join(oq), "orig_ans": ans_vocab[oa]}]
@@ -639,7 +643,7 @@ def one_stage_eval_model(
 
     gc.collect()
 
-    if is_question_consistency:
+    if is_question_consistency and log_dir is not None:
         np.save(os.path.join(log_dir, "gq_{}.npy".format(i_iter)), np.array(gq_dict))
 
     if is_failure_prediction:
