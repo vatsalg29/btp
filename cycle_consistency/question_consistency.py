@@ -27,7 +27,8 @@ class SentenceDecoder(nn.Module):
         ans_embed_hidden_size = kwargs.get('ans_embed_hidden_size', 1000)
         image_feature_in_size = kwargs.get('image_feature_in_size', 2048)
         question_embed_size = kwargs.get('question_embed_size', 2048)
-# Add 2 for <start> and <end>
+        
+        # Add 2 for <start> and <end>
         q_vocab, a_vocab = self._get_vocabs()
         n_ans = len(a_vocab)
         vocab_size = len(q_vocab) + 2
@@ -35,10 +36,18 @@ class SentenceDecoder(nn.Module):
         self.embed = nn.Embedding(vocab_size,
                                   embed_size,
                                   scale_grad_by_freq=False)
+        
+        self.ans_embed = nn.Embedding(n_ans,
+                                  embed_size,
+                                  scale_grad_by_freq=False)
 
         embed_init_path = cfg.model.question_embedding[0]["par"]["embedding_init_file"]
         embed_path = os.path.join(cfg.data.data_root_dir, embed_init_path)
         embed_init = np.load(embed_path)
+        
+#         ans_embed_init_path = cfg.model.question_embedding[0]["par"]["ans_embedding_init_file"]
+#         ans_embed_path = os.path.join(cfg.data.data_root_dir, ans_embed_init_path)
+#         ans_embed_init = np.load(ans_embed_path)
 
         #initialize start and end at extremes
         se_init = np.zeros([2, embed_size])
@@ -46,28 +55,24 @@ class SentenceDecoder(nn.Module):
         se_init[1][1:] = -1.0
         embed_init = np.concatenate([embed_init, se_init], 0)
         self.embed.weight.data.copy_(torch.from_numpy(embed_init))
+#         self.ans_embed.weight.data.copy_(torch.from_numpy(ans_embed_init))
 
 #         self.img_embed = nn.Sequential(nn.Linear(image_feature_in_size, embed_size),
 #                                        nn.BatchNorm1d(embed_size, momentum=0.01))
-
+        
         self.a_embed = nn.Sequential(nn.ReLU(),
                                      nn.Linear(n_ans, ans_embed_hidden_size),
                                      nn.ReLU(),
                                      nn.Linear(ans_embed_hidden_size, embed_size),
                                      nn.ReLU())
         
-        self.imp_a_embed = nn.Sequential(nn.ReLU(),
-                                         nn.Linear(n_ans, ans_embed_hidden_size),
-                                         nn.ReLU(),
-                                         nn.Linear(ans_embed_hidden_size, embed_size),
-                                         nn.ReLU())
+        self.imp_a_embed = nn.Linear(3, embed_size)
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.lstm = nn.LSTM(embed_size, hidden_size, 1, batch_first=True)
         self.linear = nn.Linear(hidden_size, vocab_size)
         
         self.linear2 = nn.Linear(question_embed_size,embed_size)
-        self.linear3 = nn.Linear(2*embed_size,embed_size)
         
         self.max_seg_length = 14
         self.start_idx = vocab_size - 2
@@ -89,26 +94,26 @@ class SentenceDecoder(nn.Module):
     def fuse_features(self, q, a, imp_ans):
         
         a = a.to(self.a_embed[1].weight.device)
-        imp_ans = imp_ans.to(self.imp_a_embed[1].weight.device)
+#         a = torch.argmax(a,dim=1)
+        answer_embedding = self.a_embed(a)
         
-        answer_embed = self.a_embed(a)
-        imp_ans_embed = self.imp_a_embed(imp_ans)
+#         imp_ans = imp_ans.to(self.ans_embed.weight.device)
+#         imp_ans = torch.argmax(imp_ans,dim=1)
+#         imp_ans_embedding = self.ans_embed(imp_ans)
+        
         question_embedding = self.linear2(q)
         
-#         qa_pair = torch.cat([question_embedding, answer_embed], 1)
-#         qa_embed = self.linear3(qa_pair)
-
-        qa_embed = question_embedding + answer_embed
+        imp_ans_embedding = self.imp_a_embed(imp_ans)
         
-        mixed_feat = imp_ans_embed+qa_embed
-        mixed_feat += torch.randn(mixed_feat.size()) #uncomment for noise
+        mixed_feat = imp_ans_embedding + answer_embedding + question_embedding
+#         mixed_feat += torch.randn(mixed_feat.size()).cuda() #uncomment for noise
         
         mixed_feat = mixed_feat.unsqueeze(1)
         return mixed_feat
 
-    def forward(self, q, a, answer_logits, batch_tuple,flags):
+    def forward(self, q, a, imp_knob, batch_tuple,flags):
         
-        mixed_feat = self.fuse_features(q, a, answer_logits)
+        mixed_feat = self.fuse_features(q, a, imp_knob)
 
         captions = batch_tuple[1]
         lengths = batch_tuple[0]['seq_length_batch'].clone().detach()
@@ -154,23 +159,19 @@ class SentenceDecoder(nn.Module):
         
         loss = self.compute_loss(outputs, targets) #calculated only on flagged questions
         
-        if not self.training:
-            sampled_ids = self.sample(q, a, answer_logits) 
-        else:
-            sampled_ids = self.sample(q, a, answer_logits)
+        sampled_ids = self.sample(q, a, imp_knob)
         
         # no need to send shuffled flags since new samples(original ordering) are taken
         return {'q_token_pred': outputs,
                 'qc_loss': loss,
                 'q_token_gt': targets,
                 'sampled_ids': sampled_ids,
-                'answer_logits': answer_logits,
                 'indices': indices
                }
 
-    def sample(self, q, a, answer_logits, states=None):
+    def sample(self, q, a, imp_knob, states=None):
         sampled_ids = []
-        inputs = self.fuse_features(q, a, answer_logits)
+        inputs = self.fuse_features(q, a, imp_knob)
 
         """ 
         To introduce noise in inference

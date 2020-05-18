@@ -109,7 +109,6 @@ def one_stage_train(
             myOptimizer.zero_grad()
             
             
-
             add_graph = False
 
             myModel = myModel.train()
@@ -126,6 +125,7 @@ def one_stage_train(
                 qc_loss = qc_return_dict["qc_loss"]
                
                 qc_loss = torch.mean(qc_loss, 0)  #calculated only on flagged data
+                
 
             elif is_failure_prediction and is_question_consistency:
                 _return_dict = one_stage_run_model(batch, myModel, add_graph, log_dir)
@@ -145,7 +145,11 @@ def one_stage_train(
                 input_answers_variable = input_answers_variable.cuda()
 
             total_loss = loss_criterion(logit_res, input_answers_variable)
-
+#             if not i_iter%100:
+#                 print(np.quantile(total_loss.detach().cpu().numpy(), .40))
+#             new_flags  = torch.tensor([l<3e-4 for l in total_loss]) # flag for good vqa outputs 
+            total_loss = total_loss.sum()
+            
             if is_failure_prediction and not is_question_consistency:
                 normalized_logits = masked_unk_softmax(logit_res, 1, 0)
                 answers_fp = (
@@ -252,6 +256,11 @@ def one_stage_train(
                     cosine_similarity = F.cosine_similarity(
                         detached_g_emb, detached_o_emb
                     )
+                    
+#                     questions = [[vocab[idx] for idx in detached_o_q[j]] for j in range(len(detached_o_q))]
+#                     gt_questions = [[vocab[idx] for idx in detached_g_q[j]] for j in range(len(detached_g_q))]
+                    
+#                     print(questions,gt_questions,cosine_similarity)
                     allowed_indices = (
                         cosine_similarity
                         > cfg["model"]["question_consistency"]["gating_th"]
@@ -265,14 +274,17 @@ def one_stage_train(
                 cycle_batch["input_seq_batch"] = generated_questions
                 cycle_return_dict = one_stage_run_model(cycle_batch, myModel)
                 
+                
                 if cfg["model"]["question_consistency"]["vqa_gating"]:
                     allowed_indices = (
                         cycle_return_dict["logits"].max(1)[1]
                         == cycle_batch["imp_ans_scores"].cuda().max(1)[1]
                     )
-
+                
                 ############### Compare with Implied Answer ground truth value #######################
-                allowed_indices = allowed_indices*batch["flag"].cuda() 
+                
+                allowed_indices*= batch["flag"].cuda() 
+#                 allowed_indices*= new_flags.cuda()
                 
 #                 if allowed_indices.sum() > -1:
 #                     cycle_vqa_loss = cfg.training_parameters.cc_lambda * loss_criterion(
@@ -286,9 +298,9 @@ def one_stage_train(
                         cycle_return_dict["logits"][allowed_indices],
                         cycle_batch["imp_ans_scores"][allowed_indices].cuda(),
                     )
-
+                    
                     # perform backward pass
-                    cycle_vqa_loss.backward()
+                    cycle_vqa_loss.sum().backward()
 #                     print(
 #                         "CL: {:.4f} Pass: [{}/512]".format(
 #                             cycle_vqa_loss, allowed_indices.sum().cpu().item()
@@ -390,7 +402,7 @@ def one_stage_train(
                         best_epoch = iepoch
                         best_iter = i_iter
                         best_model_snapshot_file = os.path.join(
-                            snapshot_dir, "best_model_finetuned.pth"
+                            snapshot_dir, "best_model.pth"
                         )
                         shutil.copy(model_snapshot_file, best_model_snapshot_file)
 
@@ -400,14 +412,14 @@ def one_stage_train(
                         best_epoch = iepoch
                         best_iter = i_iter
                         best_model_snapshot_file = os.path.join(
-                            snapshot_dir, "best_model_finetuned.pth"
+                            snapshot_dir, "best_model.pth"
                         )
                         shutil.copy(model_snapshot_file, best_model_snapshot_file)
 
-        print("training" + "=" * 45)
-        print_classification_report(confusion_mat, 0.0)
+#         print("training" + "=" * 45)
+#         print_classification_report(confusion_mat, 0.0)
         confusion_mat = np.zeros((2, 2))
-        print("=" * 53)
+#         print("=" * 53)
         gc.collect()
 
     writer.export_scalars_to_json(os.path.join(log_dir, "all_scalars.json"))
@@ -651,13 +663,13 @@ def one_stage_eval_model(
         print_classification_report(confusion_mat, threshold=0.0)
         print("=" * 55)
 
-    else:
-        if not type(threshold) == list:
-            print_classification_report(confusion_mat, threshold)
+#     else:
+#         if not type(threshold) == list:
+#             print_classification_report(confusion_mat, threshold)
 
-        else:
-            for _th_idx, _th in enumerate(threshold):
-                print_classification_report(confusion_mat[_th_idx], _th)
+#         else:
+#             for _th_idx, _th in enumerate(threshold):
+#                 print_classification_report(confusion_mat[_th_idx], _th)
 
     if return_cm:
         return (
@@ -826,10 +838,20 @@ def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
     imp_ans_variable = Variable(imp_ans_gt)
     imp_ans_variable = imp_ans_variable.cuda() if use_cuda else imp_ans_variable
     
+    # Load Original Answer Ground Truth
+    ans_gt = batch["ans_scores"]
+    ans_variable = Variable(ans_gt)
+    ans_variable = ans_variable.cuda() if use_cuda else ans_variable
+    
     ############## Load Implication Flag ##################
     imp_flag = batch["flag"]
     imp_flag_var = Variable(imp_flag)
     imp_flag_var = imp_flag_var.cuda() if use_cuda else imp_flag_var
+    
+    ########## Load implication type ###########
+    imp_type = batch["imp_type"]
+    imp_type_var = Variable(imp_type)
+    imp_type_var = imp_type_var.cuda() if use_cuda else imp_type_var
 
     if isinstance(input_images, list):
         input_images = input_images[0]
@@ -866,6 +888,8 @@ def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
         imp_gt_ques = imp_seq_variable,
         imp_gt_ans = imp_ans_variable,
         imp_flag = imp_flag_var,
+        gt_ans = ans_variable,
+        imp_type = imp_type_var,
         batch=batch,
     )
 

@@ -126,7 +126,7 @@ including dataset_name, imdb_version, create_time, has_answer,has_gt_layout
 
 class vqa_dataset(Dataset):
     def __init__(self, imdb_file,
-                 image_feat_directories, verbose=False, **data_params):
+                 image_feat_directories, verbose=True, **data_params):
         super(vqa_dataset, self).__init__()
         if imdb_file.endswith('.npy'):
             imdb = np.load(imdb_file,allow_pickle=True)
@@ -277,7 +277,7 @@ class vqa_dataset(Dataset):
             answer_idx = self.answer_dict.word2idx(answer)
             
 
-        # Load implied question
+        ############ Load implied question ####################
         if self.load_answer and 'qa_tokens' in iminfo:
             import random
             #t = random.choice(list(iminfo['qa_tokens'].items()))
@@ -296,7 +296,7 @@ class vqa_dataset(Dataset):
         image_feats, image_boxes, image_loc = (
             self._get_image_features_(image_file_name))
         
-        # Load Implied Answer
+        ################ Load Implied Answer ##################
         imp_answer = None
         imp_valid_answers_idx = np.zeros((10), np.int32)
         imp_valid_answers_idx.fill(-1)
@@ -330,6 +330,13 @@ class vqa_dataset(Dataset):
                     compute_answer_scores(ans_idx,
                                           self.answer_dict.num_vocab,
                                           self.answer_dict.UNK_idx))
+            
+        ############# Load implication type ####################
+        imp_type = None
+        if self.load_answer and 'imp_type' in iminfo:
+            imp_type = np.array(iminfo['imp_type'][answer][imp_idx], np.float32)
+        else:
+            imp_type = np.array([1,0,0], np.float32)
             
         ########### Load Flag ########################
         imp_flag = None
@@ -402,6 +409,9 @@ class vqa_dataset(Dataset):
         ############# Store Flag #################
         if imp_flag is not None:
             sample['flag'] = imp_flag
+            
+        if imp_type is not None:
+            sample['imp_type'] = imp_type
 
         # used for error analysis and debug,
         # output question_id, image_id, question, answer,valid_answers,

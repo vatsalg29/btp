@@ -6,8 +6,8 @@ data:
   image_feat_train:
   - btp/data/detectron_fix_100/fc6/vqa/train2014
   imdb_file_val:
-  - btp/data/imdb/imdb_just_impsminival2014.npy
-  - btp/data/imdb/imdb_just_impsval2train2014.npy
+  - btp/data/imdb/imdb_minival2014.npy
+  - btp/data/imdb/imdb_val2train2014.npy
   imdb_file_test:
   - btp/data/imdb/imdb_test2015.npy
   imdb_file_train:
@@ -76,6 +76,7 @@ model:
       dropout: 0
       embedding_dim: 300
       embedding_init_file: /home1/BTP/pg_aa_1/vqa2.0_glove.6B.300d.txt.npy
+      ans_embedding_init_file: /home1/BTP/pg_aa_1/vqa2.0_answerglove.6B.300d.txt.npy
       kernel_size: 1
       padding: 0
 optimizer:
@@ -89,8 +90,8 @@ training_parameters:
   fp_lr: 0.01
   qc_lr: 0.0005
   fp_lambda: 1.5
-  qc_lambda: 1.0
-  cc_lambda: 1.0
+  qc_lambda: 0.5
+  cc_lambda: 1.5
   clip_norm_mode: all
   lr_ratio: 0.1
   lr_steps:

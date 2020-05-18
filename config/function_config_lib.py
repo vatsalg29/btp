@@ -62,6 +62,7 @@ att_que_embed.conv2_out = 2
 att_que_embed.kernel_size = 1
 att_que_embed.padding = 0
 att_que_embed.embedding_init_file = "vqa2.0_glove.6B.300d.txt.npy"
+att_que_embed.ans_embedding_init_file = "vqa2.0_answerglove.6B.300d.txt.npy"
 
 QUESTION_MODEL = {
     "att_que_embed": att_que_embed

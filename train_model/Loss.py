@@ -33,8 +33,10 @@ class LogitBinaryCrossEntropy(nn.Module):
     def forward(self, pred_score, target_score, weights=None):
         loss = F.binary_cross_entropy_with_logits(pred_score,
                                                   target_score,
-                                                  size_average=True)
-        loss = loss * target_score.size(1)
+                                                  reduction = 'none')
+#                                                   size_average=True)
+#         loss = loss * target_score.size(1)
+        loss = torch.mean(loss,1)
         return loss
 
 

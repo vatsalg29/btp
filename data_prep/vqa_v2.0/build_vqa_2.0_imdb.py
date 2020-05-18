@@ -25,9 +25,9 @@ def build_imdb(image_set,
                coco_set_name=None,
                annotation_set_name=None):
     annotation_file = os.path.join(data_dir,
-                                   'v2_mscoco_%s_annotations.json')
+                                   'annotations.json')
     question_file = os.path.join(data_dir,
-                                 'v2_OpenEnded_mscoco_%s_questions.json')
+                                 'questions.json')
 
     print('building imdb %s' % image_set)
     has_answer = False
@@ -38,8 +38,8 @@ def build_imdb(image_set,
     annotation_set_name = (annotation_set_name
                            if annotation_set_name is not None else image_set)
 
-    if os.path.exists(annotation_file % annotation_set_name):
-        with open(annotation_file % annotation_set_name) as f:
+    if os.path.exists(annotation_file):
+        with open(annotation_file) as f:
             annotations = json.load(f)["annotations"]
             qid2ann_dict = {ann['question_id']: ann for ann in annotations}
         load_answer = True
@@ -55,7 +55,7 @@ def build_imdb(image_set,
         load_answer = False
         load_gt_layout = False '''
 
-    with open(question_file % image_set) as f:
+    with open(question_file) as f:
         questions = json.load(f)['questions']
     coco_set_name = (coco_set_name
                      if coco_set_name is not None
@@ -116,24 +116,25 @@ if __name__ == '__main__':
     data_dir = args.data_dir
     out_dir = args.out_dir
 
-    vocab_answer_file = os.path.join(out_dir, 'answers_vqa.txt')
+    #vocab_answer_file = os.path.join(out_dir, 'answers_vqa.txt')
+    vocab_answer_file = '/home1/BTP/pg_aa_1/btp/data/answers_vqa_larger.txt'
     answer_dict = text_processing.VocabDict(vocab_answer_file)
     valid_answer_set = set(answer_dict.word_list)
 
-    imdb_train2014 = build_imdb('train2014', valid_answer_set)
+   # imdb_train2014 = build_imdb('train2014', valid_answer_set)
     imdb_val2014 = build_imdb('val2014', valid_answer_set)
-    imdb_test2015 = build_imdb('test2015', valid_answer_set)
+   # imdb_test2015 = build_imdb('test2015', valid_answer_set)
 
     imdb_dir = os.path.join(out_dir, 'imdb')
     os.makedirs(imdb_dir, exist_ok=True)
-    np.save(os.path.join(imdb_dir, 'imdb_train2014.npy'),
-            np.array(imdb_train2014))
+    #np.save(os.path.join(imdb_dir, 'imdb_train2014.npy'),
+    #        np.array(imdb_train2014))
     np.save(os.path.join(imdb_dir, 'imdb_val2014.npy'),
             np.array(imdb_val2014))
-    np.save(os.path.join(imdb_dir, 'imdb_test2015.npy'),
-            np.array(imdb_test2015))
+   # np.save(os.path.join(imdb_dir, 'imdb_test2015.npy'),
+    #        np.array(imdb_test2015))
 
-    imdb_minival2014 = build_imdb('minival2014',
+    '''imdb_minival2014 = build_imdb('minival2014',
                                   valid_answer_set,
                                   coco_set_name="val2014",
                                   annotation_set_name="val2014")
@@ -145,4 +146,4 @@ if __name__ == '__main__':
     np.save(os.path.join(imdb_dir, 'imdb_minival2014.npy'),
             np.array(imdb_minival2014))
     np.save(os.path.join(imdb_dir, 'imdb_val2train2014.npy'),
-            np.array(imdb_val2train2014))
+            np.array(imdb_val2train2014))'''

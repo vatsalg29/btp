@@ -138,7 +138,7 @@ def parse_args():
         default="gpu_0/fc7"
     )
     parser.add_argument(
-        'im_or_folder', help='image or folder of images', default=None
+        '--im_or_folder', help='image or folder of images', default=None
     )
 
     if len(sys.argv) == 1:
@@ -177,17 +177,17 @@ def get_detections_from_im(cfg, model, im, image_id, feat_blob_name,
         objects = np.argmax(cls_prob[keep_boxes], axis=1)
 
 
-    return box_features[keep_boxes]
+#     return box_features[keep_boxes]
 
-    #return {
-    #    "image_id": image_id,
-    #    "image_h": np.size(im, 0),
-    #    "image_w": np.size(im, 1),
-    #    'num_boxes': len(keep_boxes),
-    #    'boxes': base64.b64encode(cls_boxes[keep_boxes]),
-    #    'features': base64.b64encode(box_features[keep_boxes]),
-    #    'object': base64.b64encode(objects)
-    #}
+    return {
+       "image_id": image_id,
+       "image_h": np.size(im, 0),
+       "image_w": np.size(im, 1),
+       'num_boxes': len(keep_boxes),
+       'boxes': base64.b64encode(cls_boxes[keep_boxes]),
+       'features': base64.b64encode(box_features[keep_boxes]),
+       'object': base64.b64encode(objects)
+    }
 
 
 def extract_bboxes(bottom_up_csv_file):

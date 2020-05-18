@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -137,10 +136,12 @@ class top_down_attention(nn.Module):
 
     def forward(self, image_feat, question_embedding, image_locs=None):
         # N x K x joint_dim
+
         joint_feature = self.modal_combine(image_feat, question_embedding)
         # N x K x n_att
         raw_attention = self.transform(joint_feature)
 
+        
         if self.normalization.lower() == 'softmax':
             attention = F.softmax(raw_attention, dim=1)
             if image_locs is not None:

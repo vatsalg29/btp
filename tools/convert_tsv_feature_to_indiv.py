@@ -27,8 +27,8 @@ out_dir = args.out_dir
 
 csv.field_size_limit(sys.maxsize)
 
-FIELDNAMES = ['image_id', 'image_w',
-              'image_h', 'num_boxes', 'boxes', 'features']
+FIELDNAMES = ["image_id", "image_h", "image_w", "objects_id", "objects_conf",
+              "attrs_id", "attrs_conf", "num_boxes", "boxes", "features"]
 infile = args.infile
 
 label = args.label
@@ -42,7 +42,7 @@ with open(infile, "r") as tsv_in_file:
     reader = csv.DictReader(tsv_in_file, delimiter='\t', fieldnames=FIELDNAMES)
     for item in reader:
         item['num_boxes'] = int(item['num_boxes'])
-        image_id = int(item['image_id'])
+        image_id = item['image_id']
         image_w = float(item['image_w'])
         image_h = float(item['image_h'])
 
@@ -58,5 +58,5 @@ with open(infile, "r") as tsv_in_file:
                                 "image_feat": image_feat}
 
         image_file_name = os.path.join(out_dir,
-                                       'COCO_'+label+'_%012d.npy' % image_id)
+                                       image_id + '.npy')
         np.save(image_file_name, image_feat_and_boxes)

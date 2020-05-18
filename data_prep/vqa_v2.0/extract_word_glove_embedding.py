@@ -59,7 +59,7 @@ if __name__ == '__main__':
     out_dir = args.out_dir
 
     os.makedirs(out_dir, exist_ok=True)
-    emb_file_name = "vqa2.0_"+os.path.basename(glove_file)+".npy"
+    emb_file_name = "vqa2.0_answer"+os.path.basename(glove_file)+".npy"
 
     weights = subset_weights(glove_file, vocabulary_file)
 
