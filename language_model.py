@@ -5,7 +5,7 @@ https://github.com/hengyuan-hu/bottom-up-attention-vqa
 import torch
 import torch.nn as nn
 import numpy as np
-
+from pdb import set_trace
 
 class WordEmbedding(nn.Module):
     """Word Embedding
@@ -16,9 +16,9 @@ class WordEmbedding(nn.Module):
     def __init__(self, ntoken, emb_dim, dropout, op=''):
         super(WordEmbedding, self).__init__()
         self.op = op
-        self.emb = nn.Embedding(ntoken+1, emb_dim, padding_idx=ntoken)
+        self.emb = nn.Embedding(ntoken+1, emb_dim, padding_idx=0)
         if 'c' in op:
-            self.emb_ = nn.Embedding(ntoken+1, emb_dim, padding_idx=ntoken)
+            self.emb_ = nn.Embedding(ntoken+1, emb_dim, padding_idx=0)
             self.emb_.weight.requires_grad = False # fixed
         self.dropout = nn.Dropout(dropout)
         self.ntoken = ntoken
@@ -92,5 +92,6 @@ class QuestionEmbedding(nn.Module):
         # x: [batch, sequence, in_dim]
         batch = x.size(0)
         hidden = self.init_hidden(batch)
+
         output, hidden = self.rnn(x, hidden)
         return output

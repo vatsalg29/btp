@@ -35,7 +35,7 @@ class BanModel(nn.Module):
         self.drop = nn.Dropout(.5)
         self.tanh = nn.Tanh()
 
-    def forward(self, v, b, q, labels):
+    def forward(self, v, b, q):
         """Forward
 
         v: [batch, num_objs, obj_dim]
@@ -45,7 +45,9 @@ class BanModel(nn.Module):
         return: logits, not probs
         """
         w_emb = self.w_emb(q)
+        q_emb_1 = self.q_emb(w_emb)
         q_emb = self.q_emb.forward_all(w_emb) # [batch, q_len, q_dim]
+
         boxes = b[:,:,:4].transpose(1,2)
 
         b_emb = [0] * self.glimpse
@@ -62,7 +64,7 @@ class BanModel(nn.Module):
 
         logits = self.classifier(q_emb.sum(1))
 
-        return logits, att
+        return logits, att, q_emb_1
 
 class BanModel_flickr(nn.Module):
     def __init__(self, w_emb, q_emb, v_att, op, glimpse):
@@ -103,7 +105,7 @@ class BanModel_flickr(nn.Module):
 
 
 def build_ban(dataset, num_hid, op='', gamma=4, task='vqa'):
-    w_emb = WordEmbedding(dataset.dictionary.ntoken, 300, .0, op)
+    w_emb = WordEmbedding(dataset.vocab_dict.num_vocab, 300, .0, op)
     q_emb = QuestionEmbedding(300 if 'c' not in op else 600, num_hid, 1, False, .0)
     v_att = BiAttention(dataset.v_dim, num_hid, num_hid, gamma)
     if task == 'vqa':
@@ -116,7 +118,7 @@ def build_ban(dataset, num_hid, op='', gamma=4, task='vqa'):
             q_prj.append(FCNet([num_hid, num_hid], '', .2))
             c_prj.append(FCNet([objects + 1, num_hid], 'ReLU', .0))
         classifier = SimpleClassifier(
-            num_hid, num_hid * 2, dataset.num_ans_candidates, .5)
+            num_hid, num_hid * 2, dataset.answer_dict.num_vocab, .5)
         counter = Counter(objects)
         return BanModel(dataset, w_emb, q_emb, v_att, b_net, q_prj, c_prj, classifier, counter, op, gamma)
     elif task == 'flickr':

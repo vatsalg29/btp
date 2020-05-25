@@ -140,21 +140,20 @@ def filter_answers(answers_dset, min_occurence):
     """This will change the answer to preprocessed version
     """
     occurence = {}
-
+    answer_list = []
     for ans_entry in answers_dset:
-        answers = ans_entry['answers']
         gtruth = ans_entry['multiple_choice_answer']
         gtruth = preprocess_answer(gtruth)
         if gtruth not in occurence:
             occurence[gtruth] = set()
         occurence[gtruth].add(ans_entry['question_id'])
-    for answer in list(occurence):
-        if len(occurence[answer]) < min_occurence:
-            occurence.pop(answer)
+    for answer in occurence.keys():
+        if len(occurence[answer]) >= min_occurence:
+            answer_list.append(answer)
 
     print('Num of answers that appear >= %d times: %d' % (
-        min_occurence, len(occurence)))
-    return occurence
+        min_occurence, len(answer_list)))
+    return answer_list
 
 
 def create_ans2label(occurence, name, cache_root='data/cache'):

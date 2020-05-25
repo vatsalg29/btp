@@ -9,12 +9,13 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, ConcatDataset
 import numpy as np
 
-from dataset import Dictionary, VQAFeatureDataset, VisualGenomeFeatureDataset, Flickr30kFeatureDataset
+from dataset import Dictionary, VQAFeatureDataset
 import base_model
 import utils
 from utils import trim_collate
-from dataset import tfidf_from_questions
+# from dataset import tfidf_from_questions
 
+from question_consistency import Qgen
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -31,6 +32,7 @@ def parse_args():
     parser.add_argument('--output', type=str, default='saved_models/ban')
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--seed', type=int, default=1204, help='random seed')
+    parser.add_argument('--use_cycle', action='store_true', help='To train with cycle')
     args = parser.parse_args()
     return args
 
@@ -46,20 +48,9 @@ if __name__ == '__main__':
         from train import train
         dict_path = 'data/dictionary.pkl'
         dictionary = Dictionary.load_from_file(dict_path)
-        train_dset = VQAFeatureDataset('train', dictionary, adaptive=True)
-        val_dset = VQAFeatureDataset('val', dictionary, adaptive=True)
-        w_emb_path = 'data/glove6b_init_300d.npy'
-
-    elif args.task == 'flickr':
-        from train_flickr import train
-        dict_path = 'data/flickr30k/dictionary.pkl'
-        dictionary = Dictionary.load_from_file(dict_path)
-        train_dset = Flickr30kFeatureDataset('train', dictionary)
-        val_dset = Flickr30kFeatureDataset('val', dictionary)
-        w_emb_path = 'data/flickr30k/glove6b_init_300d.npy'
-        args.op = ''
-        args.gamma = 1
-        args.tfidf = False
+        train_dset = VQAFeatureDataset('train', dictionary)
+        val_dset = VQAFeatureDataset('val', dictionary)
+        w_emb_path = 'data/vqa2.0_glove.6B.300d.txt.npy'
 
     utils.create_dir(args.output)
     logger = utils.Logger(os.path.join(args.output, 'args.txt'))
@@ -73,10 +64,6 @@ if __name__ == '__main__':
 
     tfidf = None
     weights = None
-
-    if args.tfidf:
-        dict = Dictionary.load_from_file(dict_path)
-        tfidf, weights = tfidf_from_questions(['train', 'val', 'test2015'], dict)
 
     model.w_emb.init_embedding(w_emb_path, tfidf, weights)
 
@@ -108,11 +95,16 @@ if __name__ == '__main__':
             train_loader = DataLoader(trainval_dset, batch_size, shuffle=True, num_workers=1, collate_fn=utils.trim_collate)
             eval_loader = None
         else:
-            train_loader = DataLoader(train_dset, batch_size, shuffle=True, num_workers=1, collate_fn=utils.trim_collate)
-            eval_loader = DataLoader(val_dset, batch_size, shuffle=False, num_workers=1, collate_fn=utils.trim_collate)
+            train_loader = DataLoader(train_dset, batch_size, shuffle=True, num_workers=15, collate_fn=utils.trim_collate)
+            eval_loader = DataLoader(val_dset, batch_size, shuffle=False, num_workers=15, collate_fn=utils.trim_collate)
 
     elif args.task == 'flickr':
-        train_loader = DataLoader(train_dset, batch_size, shuffle=True, num_workers=1, collate_fn=utils.trim_collate)
-        eval_loader = DataLoader(val_dset, batch_size, shuffle=False, num_workers=1, collate_fn=utils.trim_collate)
+        train_loader = DataLoader(train_dset, batch_size, shuffle=True, num_workers=15, collate_fn=utils.trim_collate)
+        eval_loader = DataLoader(val_dset, batch_size, shuffle=False, num_workers=15, collate_fn=utils.trim_collate)
 
-    train(model, train_loader, eval_loader, args.epochs, args.output, optim, epoch)
+    q_gen=None
+    if args.use_cycle:
+        q_gen = Qgen(embed_path = 'data/vqa2.0_glove.6B.300d.txt.npy')
+        q_gen = nn.DataParallel(q_gen).cuda()
+    
+    train(model, train_loader, eval_loader, args.epochs, args.output, optim, epoch, q_gen, args.use_cycle)

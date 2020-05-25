@@ -1,0 +1,13 @@
+*.log
+*.err
+*.pyc
+.idea/*
+*/__pycache__/*
+data/*
+data_2/*
+results/*
+saved_models/*
+boards/*
+.DS_Store
+orig_data/*
+*.ipynb_*
