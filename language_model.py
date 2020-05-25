@@ -12,7 +12,7 @@ class WordEmbedding(nn.Module):
     """
     def __init__(self, ntoken, emb_dim, dropout):
         super(WordEmbedding, self).__init__()
-        self.emb = nn.Embedding(ntoken+1, emb_dim, padding_idx=ntoken)
+        self.emb = nn.Embedding(ntoken+1, emb_dim, padding_idx=0)
         self.dropout = nn.Dropout(dropout)
         self.ntoken = ntoken
         self.emb_dim = emb_dim

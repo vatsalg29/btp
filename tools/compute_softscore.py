@@ -4,7 +4,7 @@ import sys
 import json
 import numpy as np
 import re
-import cPickle
+import pickle
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dataset import Dictionary
@@ -134,21 +134,20 @@ def filter_answers(answers_dset, min_occurence):
     """This will change the answer to preprocessed version
     """
     occurence = {}
-
+    answer_list = []
     for ans_entry in answers_dset:
-        answers = ans_entry['answers']
         gtruth = ans_entry['multiple_choice_answer']
         gtruth = preprocess_answer(gtruth)
         if gtruth not in occurence:
             occurence[gtruth] = set()
         occurence[gtruth].add(ans_entry['question_id'])
     for answer in occurence.keys():
-        if len(occurence[answer]) < min_occurence:
-            occurence.pop(answer)
+        if len(occurence[answer]) >= min_occurence:
+            answer_list.append(answer)
 
     print('Num of answers that appear >= %d times: %d' % (
-        min_occurence, len(occurence)))
-    return occurence
+        min_occurence, len(answer_list)))
+    return answer_list
 
 
 def create_ans2label(occurence, name, cache_root='data/cache'):
@@ -169,9 +168,9 @@ def create_ans2label(occurence, name, cache_root='data/cache'):
     utils.create_dir(cache_root)
 
     cache_file = os.path.join(cache_root, name+'_ans2label.pkl')
-    cPickle.dump(ans2label, open(cache_file, 'wb'))
+    pickle.dump(ans2label, open(cache_file, 'wb'))
     cache_file = os.path.join(cache_root, name+'_label2ans.pkl')
-    cPickle.dump(label2ans, open(cache_file, 'wb'))
+    pickle.dump(label2ans, open(cache_file, 'wb'))
     return ans2label
 
 
@@ -208,7 +207,7 @@ def compute_target(answers_dset, ans2label, name, cache_root='data/cache'):
 
     utils.create_dir(cache_root)
     cache_file = os.path.join(cache_root, name+'_target.pkl')
-    cPickle.dump(target, open(cache_file, 'wb'))
+    pickle.dump(target, open(cache_file, 'wb'))
     return target
 
 

@@ -16,7 +16,7 @@ class BaseModel(nn.Module):
         self.v_net = v_net
         self.classifier = classifier
 
-    def forward(self, v, b, q, labels):
+    def forward(self, v, b, q):
         """Forward
 
         v: [batch, num_objs, obj_dim]
@@ -35,26 +35,26 @@ class BaseModel(nn.Module):
         v_repr = self.v_net(v_emb)
         joint_repr = q_repr * v_repr
         logits = self.classifier(joint_repr)
-        return logits
+        return logits,q_emb
 
 
 def build_baseline0(dataset, num_hid):
-    w_emb = WordEmbedding(dataset.dictionary.ntoken, 300, 0.0)
+    w_emb = WordEmbedding(dataset.vocab_dict.num_vocab, 300, 0.0)
     q_emb = QuestionEmbedding(300, num_hid, 1, False, 0.0)
     v_att = Attention(dataset.v_dim, q_emb.num_hid, num_hid)
     q_net = FCNet([num_hid, num_hid])
     v_net = FCNet([dataset.v_dim, num_hid])
     classifier = SimpleClassifier(
-        num_hid, 2 * num_hid, dataset.num_ans_candidates, 0.5)
+        num_hid, 2 * num_hid, dataset.answer_dict.num_vocab, 0.5)
     return BaseModel(w_emb, q_emb, v_att, q_net, v_net, classifier)
 
 
 def build_baseline0_newatt(dataset, num_hid):
-    w_emb = WordEmbedding(dataset.dictionary.ntoken, 300, 0.0)
+    w_emb = WordEmbedding(dataset.vocab_dict.num_vocab, 300, 0.0)
     q_emb = QuestionEmbedding(300, num_hid, 1, False, 0.0)
     v_att = NewAttention(dataset.v_dim, q_emb.num_hid, num_hid)
     q_net = FCNet([q_emb.num_hid, num_hid])
     v_net = FCNet([dataset.v_dim, num_hid])
     classifier = SimpleClassifier(
-        num_hid, num_hid * 2, dataset.num_ans_candidates, 0.5)
+        num_hid, num_hid * 2, dataset.answer_dict.num_vocab, 0.5)
     return BaseModel(w_emb, q_emb, v_att, q_net, v_net, classifier)
