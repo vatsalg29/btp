@@ -11,7 +11,7 @@ from dataset_utils.dataSet import vqa_dataset
 from dataset_utils.vqa_concate_dataset import vqa_concate_dataset
 
 
-def prepare_data_set(imdb_file_label, image_dir_label, **data_config):
+def prepare_data_set(imdb_file_label, image_dir_label, name, **data_config):
     # get the potential shared data_config info
     data_root_dir = data_config['data_root_dir']
     vocab_question_file = os.path.join(
@@ -60,7 +60,8 @@ def prepare_data_set(imdb_file_label, image_dir_label, **data_config):
                                     fastRead=image_fast_reader,
                                     verbose=verbose,
                                     test_mode=test_mode,
-                                    image_max_loc=image_max_loc)
+                                    image_max_loc=image_max_loc,
+                                    name=name)
         datasets.append(train_dataset)
 
     dataset = vqa_concate_dataset(datasets)
@@ -71,6 +72,7 @@ def prepare_data_set(imdb_file_label, image_dir_label, **data_config):
 def prepare_train_data_set(**data_config):
     return prepare_data_set('imdb_file_train',
                             'image_feat_train',
+                            'train',
                             **data_config)
 
 
@@ -78,9 +80,9 @@ def prepare_eval_data_set(enforce_slow_reader=False, **data_config):
     if enforce_slow_reader:
         data_config['image_fast_reader'] = False
 
-    return prepare_data_set('imdb_file_val', 'image_feat_val', **data_config)
+    return prepare_data_set('imdb_file_val', 'image_feat_val', 'val', **data_config)
 
 
 def prepare_test_data_set(**data_config):
     data_config['image_fast_reader'] = False
-    return prepare_data_set('imdb_file_test', 'image_feat_test', **data_config)
+    return prepare_data_set('imdb_file_test', 'image_feat_test', 'test', **data_config)

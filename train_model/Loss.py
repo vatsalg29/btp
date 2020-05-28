@@ -9,7 +9,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from pdb import set_trace
 
 def get_loss_criterion(loss_config):
     if loss_config == 'logitBCE':
@@ -31,6 +31,7 @@ class LogitBinaryCrossEntropy(nn.Module):
         super(LogitBinaryCrossEntropy, self).__init__()
 
     def forward(self, pred_score, target_score, weights=None):
+#         set_trace()
         loss = F.binary_cross_entropy_with_logits(pred_score,
                                                   target_score,
                                                   reduction = 'none')

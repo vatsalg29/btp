@@ -23,6 +23,19 @@ from cycle_consistency.question_consistency import \
 import torch.nn as nn
 import torch
 
+# from butd.attention import Attention, NewAttention
+# from butd.language_model import WordEmbedding, QuestionEmbedding
+# from butd.classifier import SimpleClassifier
+# from butd.fc import FCNet
+
+# from ban.attention import BiAttention
+# from ban.language_model import WordEmbedding, QuestionEmbedding
+# from ban.classifier import SimpleClassifier
+# from ban.fc import FCNet
+# from ban.bc import BCNet
+# from ban.counting import Counter
+
+from top_down_bottom_up.top_down_bottom_up_model import butd_with_qc_cycle, ban_with_qc_cycle, butd_model, ban_model
 
 def get_two_layer(img_dim):
     return inter_layer(img_dim, 2)
@@ -93,6 +106,34 @@ def prepare_model(num_vocab_txt, num_choices, **model_config):
         in_dim=joint_embedding_dim,
         out_dim=num_choices)
 
+    ############# BUTD Model ####################
+#     num_hid = 1024
+#     w_emb = WordEmbedding(num_vocab_txt, 300, 0.0)
+#     q_emb = QuestionEmbedding(300, num_hid, 1, False, 0.0)
+#     v_att = NewAttention(2048, q_emb.num_hid, num_hid)
+#     q_net = FCNet([q_emb.num_hid, num_hid])
+#     v_net = FCNet([2048, num_hid])
+#     classifier = SimpleClassifier(num_hid, num_hid * 2, num_choices, 0.5)
+    
+    ############### BAN Model ######################
+#     num_hid = 1280
+#     gamma = 8
+#     op = 'c'
+#     w_emb = WordEmbedding(num_vocab_txt, 300, .0, op)
+#     q_emb = QuestionEmbedding(300 if 'c' not in op else 600, num_hid, 1, False, .0)
+#     v_att = BiAttention(2048, num_hid, num_hid, gamma)
+#     b_net = []
+#     q_prj = []
+#     c_prj = []
+#     objects = 36  # minimum number of boxes, can be 36 for our approach
+#     for i in range(gamma):
+#         b_net.append(BCNet(2048, num_hid, num_hid, None, k=1))
+#         q_prj.append(FCNet([num_hid, num_hid], '', .2))
+#         c_prj.append(FCNet([objects + 1, num_hid], 'ReLU', .0))
+#     classifier = SimpleClassifier(num_hid, num_hid * 2, num_choices, .5)
+#     counter = Counter(objects)
+
+    ################ QC or FP Module ###################
     is_failure_prediction = model_config.get('failure_predictor', {}).get('hidden_1', 0)
     is_question_consistency = model_config.get('question_consistency', {}).get('hidden_size', 0)
     print("Question consistency is" + str(is_question_consistency) + str(is_failure_prediction))
@@ -104,11 +145,21 @@ def prepare_model(num_vocab_txt, num_choices, **model_config):
         decode_question = model_config['question_consistency'].get('decode_question', False)
         attended = model_config['question_consistency'].get('attended', False)
         model_class = vqa_multi_modal_with_qc_cycle
+#         model_class = butd_with_qc_cycle
+#         model_class = ban_with_qc_cycle
 
         my_model = model_class(image_emdedding_models_list, question_embeding_models,
                                multi_modal_combine, classifier, image_feature_encode_list,
                                inter_model, question_consistency_model, skip_thought,
                                decode_question, attended)
+        
+        ##### Call for BUTD #######
+#         my_model = model_class(w_emb, q_emb, v_att, q_net, v_net, classifier, question_consistency_model, skip_thought,
+#                                decode_question, attended)
+        
+        ###### Call for BAN #########
+#         my_model = model_class(w_emb, q_emb, v_att, b_net, q_prj, c_prj, classifier, counter, op, gamma, question_consistency_model,
+#                                 skip_thought, decode_question, attended)
 
     elif is_question_consistency and is_failure_prediction:
         feat_combine = model_config['failure_predictor']['feat_combine']
@@ -136,6 +187,8 @@ def prepare_model(num_vocab_txt, num_choices, **model_config):
     else:
         my_model = vqa_multi_modal_model(image_emdedding_models_list, question_embeding_models,
                                          multi_modal_combine, classifier, image_feature_encode_list, inter_model)
+#         my_model = butd_model(w_emb, q_emb, v_att, q_net, v_net, classifier)
+#         my_model = ban_model(w_emb, q_emb, v_att, b_net, q_prj, c_prj, classifier, counter, op, gamma)
 
     if use_cuda:
         my_model = my_model.cuda()

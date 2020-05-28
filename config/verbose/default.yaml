@@ -19,8 +19,10 @@ data:
   - btp/data/imdb/imdb_train2014.npy
   - btp/data/imdb/imdb_just_impstrain2014.npy
   imdb_file_val:
-  - finetuned_pythia_2/imdb/imdb_val2014.npy
-#   - btp/data/imdb/imdb_val2train2014.npy
+#   - btp/data/rephrasings/new/imdb/imdb_val2014.npy
+  - btp/data/imdb/imdb_val2014.npy
+#   - btp/data/imdb/imdb_just_impsval2train2014.npy
+#   - btp/data/imdb/imdb_just_impsminival2014.npy
   num_workers: 5
   question_max_len: 14
   vocab_answer_file: btp/data/answers_vqa.txt
@@ -74,15 +76,19 @@ optimizer:
 run: train
 training_parameters:
   clip_norm_mode: all
-  lr_ratio: 0.1
+  lr_ratio: 0.25
   lr_steps:
-  - 5000
-  - 7000
-  - 9000
-  - 11000
+#   - 5000
+#   - 7000
+#   - 9000
+#   - 11000
+#   - 13000
+#   - 15000
+#   - 18000
+  - 35000
   max_grad_l2_norm: 0.25
-  max_iter: 12000
+  max_iter: 50000
   report_interval: 100
   snapshot_interval: 1000
-  wu_factor: 0.2
-  wu_iters: 1000
+  wu_factor: 0.25
+  wu_iters: 3400

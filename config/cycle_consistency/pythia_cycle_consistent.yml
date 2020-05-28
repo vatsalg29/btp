@@ -6,6 +6,7 @@ data:
   image_feat_train:
   - btp/data/detectron_fix_100/fc6/vqa/train2014
   imdb_file_val:
+#   - btp/data/rephrasings/new/imdb/imdb_val2014.npy
   - btp/data/imdb/imdb_minival2014.npy
   - btp/data/imdb/imdb_val2train2014.npy
   imdb_file_test:
@@ -99,6 +100,7 @@ training_parameters:
   - 14000
   - 18000
   - 22000
+#   - 31000
   max_grad_l2_norm: 0.25
   max_iter: 25000
   report_interval: 200

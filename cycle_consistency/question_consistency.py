@@ -26,7 +26,7 @@ class SentenceDecoder(nn.Module):
         hidden_size = kwargs.get('hidden_size', 512)
         ans_embed_hidden_size = kwargs.get('ans_embed_hidden_size', 1000)
         image_feature_in_size = kwargs.get('image_feature_in_size', 2048)
-        question_embed_size = kwargs.get('question_embed_size', 2048)
+        question_embed_size = kwargs.get('question_embed_size', 2048) ######## Change as per model
         
         # Add 2 for <start> and <end>
         q_vocab, a_vocab = self._get_vocabs()
@@ -37,9 +37,9 @@ class SentenceDecoder(nn.Module):
                                   embed_size,
                                   scale_grad_by_freq=False)
         
-        self.ans_embed = nn.Embedding(n_ans,
-                                  embed_size,
-                                  scale_grad_by_freq=False)
+#         self.ans_embed = nn.Embedding(n_ans,
+#                                   embed_size,
+#                                   scale_grad_by_freq=False)
 
         embed_init_path = cfg.model.question_embedding[0]["par"]["embedding_init_file"]
         embed_path = os.path.join(cfg.data.data_root_dir, embed_init_path)
@@ -66,7 +66,13 @@ class SentenceDecoder(nn.Module):
                                      nn.Linear(ans_embed_hidden_size, embed_size),
                                      nn.ReLU())
         
-        self.imp_a_embed = nn.Linear(3, embed_size)
+        self.imp_a_embed = nn.Sequential(nn.ReLU(),
+                                     nn.Linear(n_ans, ans_embed_hidden_size),
+                                     nn.ReLU(),
+                                     nn.Linear(ans_embed_hidden_size, embed_size),
+                                     nn.ReLU())
+        
+#         self.imp_a_embed = nn.Linear(3, embed_size)
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.lstm = nn.LSTM(embed_size, hidden_size, 1, batch_first=True)
@@ -116,7 +122,7 @@ class SentenceDecoder(nn.Module):
         mixed_feat = self.fuse_features(q, a, imp_knob)
 
         captions = batch_tuple[1]
-        lengths = batch_tuple[0]['seq_length_batch'].clone().detach()
+        lengths = batch_tuple[0]['imp_seq_length_batch'].clone().detach()
         captions = captions.to(self.embed.weight.device)
                 
         # Add <end> token to captions

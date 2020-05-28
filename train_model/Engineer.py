@@ -216,7 +216,7 @@ def one_stage_train(
                     raise NotImplementedError
             myOptimizer.step()
             scheduler.step(i_iter)
-
+            _closs= 0
             if (
                 cfg.model.question_consistency.cycle
                 and i_iter > cfg["model"]["question_consistency"]["activation_iter"]
@@ -284,6 +284,10 @@ def one_stage_train(
                 ############### Compare with Implied Answer ground truth value #######################
                 
                 allowed_indices*= batch["flag"].cuda() 
+                
+#                 print(
+#                         "Allowed Batches {}".format(allowed_indices.sum().cpu().item())
+#                     )
 #                 allowed_indices*= new_flags.cuda()
                 
 #                 if allowed_indices.sum() > -1:
@@ -301,11 +305,8 @@ def one_stage_train(
                     
                     # perform backward pass
                     cycle_vqa_loss.sum().backward()
-#                     print(
-#                         "CL: {:.4f} Pass: [{}/512]".format(
-#                             cycle_vqa_loss, allowed_indices.sum().cpu().item()
-#                         )
-#                     )
+                    _closs = cycle_vqa_loss.sum()
+#                     print( "CL: {:.4f}".format(cycle_vqa_loss.sum()))
                     myOptimizer.step()
 
             scores = torch.sum(
@@ -325,12 +326,12 @@ def one_stage_train(
                 )
 
                 print(
-                    "iter:",
-                    i_iter,
+                    "iter: %d" %i_iter,
+#                     "lr: %.4f" % myOptimizer.param_groups[0]['lr'],
                     "train_loss: %.4f" % cur_loss,
                     " train_score: %.4f" % accuracy,
                     " qc_loss: %.4f" % qc_loss,
-                    " fp_loss: %.4f" % fp_loss,
+                    " cycle_loss: %.4f" % _closs,
                     " avg_train_score: %.4f" % avg_accuracy,
                     "val_score: %.4f" % val_score,
                     "val_loss: %.4f" % val_loss,
@@ -347,6 +348,7 @@ def one_stage_train(
 
                 writer.add_scalar("train_loss", cur_loss, i_iter)
                 writer.add_scalar("train_score", accuracy, i_iter)
+                writer.add_scalar("cycle_loss",_closs, i_iter)
                 writer.add_scalar("train_score_avg", avg_accuracy, i_iter)
                 writer.add_scalar("val_score", val_score, i_iter)
                 writer.add_scalar("val_loss", val_loss, i_iter)
@@ -482,7 +484,7 @@ def evaluate_a_batch(batch, myModel, loss_criterion):
         compute_score_with_logits(logit_res, input_answers_variable.data)
     )
 
-    total_loss = loss_criterion(logit_res, input_answers_variable)
+    total_loss = loss_criterion(logit_res, input_answers_variable).sum()
 
     if is_failure_prediction and not is_question_consistency:
         total_loss = 0
@@ -546,11 +548,11 @@ def one_stage_eval_model(
         images = batch["image_id"]
         orig_answers = batch["answer_label_batch"].data.cpu().numpy()
         imp_answers = batch["imp_answer_label_batch"].data.cpu().numpy()
-#         verbose_info = batch['verbose_info']
-#         q_ids = verbose_info['question_id'].cpu().numpy()
+        verbose_info = batch['verbose_info']
+        q_ids = verbose_info['question_id'].cpu().numpy()
         
-        for jdx, (q, gtq, oq, img, oa, ia) in enumerate(zip(questions, gt_questions, orig_questions, images, orig_answers, imp_answers)):
-            gq_dict["annotations"] += [{"image_id": int(img), "imp_ans": ans_vocab[ia], "gen_ques": " ".join(q), "gt_gen_ques": " ".join(gtq)}]
+        for jdx, (q, gtq, oq, img, oa, ia, qid) in enumerate(zip(questions, gt_questions, orig_questions, images, orig_answers, imp_answers, q_ids)):
+            gq_dict["annotations"] += [{"image_id": int(img), "imp_ans": ans_vocab[ia], "gen_ques": " ".join(q), "gt_gen_ques": " ".join(gtq), "ques_id": int(qid)}]
             gq_dict["ques_answers"] += [{"image_id": int(img), "orig_ques": " ".join(oq), "orig_ans": ans_vocab[oa]}]
 
     confusion_mat = (
@@ -852,6 +854,15 @@ def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
     imp_type = batch["imp_type"]
     imp_type_var = Variable(imp_type)
     imp_type_var = imp_type_var.cuda() if use_cuda else imp_type_var
+    
+    ########## Load features and spatials for BAN and BUTD ###########
+#     image_ft = batch["image_ft"]
+#     image_ft_var = Variable(image_ft)
+#     image_ft_var = image_ft_var.cuda() if use_cuda else image_ft_var
+    
+#     spatials = batch["spatials"]
+#     spatials_var = Variable(spatials)
+#     spatials_var = spatials_var.cuda() if use_cuda else spatials_var
 
     if isinstance(input_images, list):
         input_images = input_images[0]
@@ -870,7 +881,7 @@ def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
             image_dim_variable.cuda() if use_cuda else image_dim_variable
         )
 
-    # check if more than 1 image_feat_batch
+#     check if more than 1 image_feat_batch
     i = 1
     image_feat_key = "image_feat_batch_%s"
     while image_feat_key % str(i) in batch:
@@ -892,6 +903,17 @@ def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
         imp_type = imp_type_var,
         batch=batch,
     )
+    
+    ####### for BUTD or BAN model ########
+#     return_dict = myModel(
+#         v=image_ft_var,
+#         b=spatials_var,
+#         q=input_txt_variable,
+#         imp_gt_ques = imp_seq_variable,
+#         imp_flag = imp_flag_var,
+#         imp_type = imp_type_var,
+#         batch=batch,
+#     )
 
     if add_graph:
         with SummaryWriter(log_dir=log_dir, comment="basicblock") as w:

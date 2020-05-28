@@ -209,7 +209,7 @@ class vqa_multi_modal_with_qc_cycle(vqa_multi_modal_model):
         ############### QG ########## (Passing Q and A' as info and A_imp_gt as answer and Q_imp_gt to compare with)
         qc_return_dict = self.question_consistency(ques_feat_input,
                                                    return_dict['logits'].clone().detach(),
-                                                   imp_type.clone().detach(),
+                                                   imp_gt_ans.clone().detach(),
                                                    q_gt_input,
                                                    imp_flag.clone().detach())
 
@@ -264,3 +264,199 @@ class vqa_multi_modal_with_fpqc_cycle(vqa_multi_modal_with_qc_cycle):
 
         return_dict.update({'fp_return_dict': fp_return_dict})
         return return_dict
+
+    
+class butd_model(nn.Module):
+    def __init__(self, w_emb, q_emb, v_att, q_net, v_net, classifier):
+        super(butd_model, self).__init__()
+        self.w_emb = w_emb
+        self.q_emb = q_emb
+        self.v_att = v_att
+        self.q_net = q_net
+        self.v_net = v_net
+        self.classifier = classifier
+
+    def forward(self, v, b, q, **kwargs):
+        """Forward
+
+        v: [batch, num_objs, obj_dim]
+        b: [batch, num_objs, b_dim]
+        q: [batch_size, seq_length]
+
+        return: logits, not probs
+        """
+#         set_trace()
+        w_emb = self.w_emb(q)
+        q_emb = self.q_emb(w_emb) # [batch, q_dim]
+
+        att = self.v_att(v, q_emb)
+        v_emb = (att * v).sum(1) # [batch, v_dim]
+
+        q_repr = self.q_net(q_emb)
+        v_repr = self.v_net(v_emb)
+        joint_repr = q_repr * v_repr
+        logits = self.classifier(joint_repr)
+#         return logits,q_emb, v_emb
+        return {'logits': logits,
+               'q_emb': q_emb}
+    
+class butd_with_qc_cycle(butd_model):
+    def __init__(self,
+                 w_emb,
+                 q_emb,
+                 v_att,
+                 q_net,
+                 v_net,
+                 classifier,
+                 question_consistency_model=None,
+                 skip_thought=False,
+                 decode_question=False,
+                 attended=False):
+
+        super().__init__(w_emb,
+                         q_emb,
+                         v_att,
+                         q_net,
+                         v_net,
+                         classifier)
+
+        self.question_consistency = question_consistency_model
+        self.skip_thought = skip_thought
+        self.decode_question = decode_question
+        self.attended = attended
+
+        self.feat_dict = None
+
+    def forward(self,
+                v,
+                b,
+                q,
+                imp_gt_ques,
+                imp_flag,
+                imp_type,
+                input_answers=None, **kwargs):
+        return_dict = super().forward(v, b, q)
+        self.feat_dict = return_dict
+        
+        q_gt_input = (kwargs['batch'],
+                      imp_gt_ques.clone().detach())
+            
+        ques_feat_input = self.feat_dict['q_emb'].clone().detach()
+            
+        qc_return_dict = self.question_consistency(ques_feat_input,
+                                                   return_dict['logits'].clone().detach(),
+                                                   imp_type.clone().detach(),
+                                                   q_gt_input,
+                                                   imp_flag.clone().detach())
+
+        return {'logits': return_dict['logits'],
+                'qc_return_dict': qc_return_dict}
+    
+class ban_model(nn.Module):
+    def __init__(self, w_emb, q_emb, v_att, b_net, q_prj, c_prj, classifier, counter, op, glimpse):
+        super(ban_model, self).__init__()
+        self.op = op
+        self.glimpse = glimpse
+        self.w_emb = w_emb
+        self.q_emb = q_emb
+        self.v_att = v_att
+        self.b_net = nn.ModuleList(b_net)
+        self.q_prj = nn.ModuleList(q_prj)
+        self.c_prj = nn.ModuleList(c_prj)
+        self.classifier = classifier
+        self.counter = counter
+        self.drop = nn.Dropout(.5)
+        self.tanh = nn.Tanh()
+
+    def forward(self, v, b, q, **kwargs):
+        """Forward
+
+        v: [batch, num_objs, obj_dim]
+        b: [batch, num_objs, b_dim]
+        q: [batch_size, seq_length]
+
+        return: logits, not probs
+        """
+        w_emb = self.w_emb(q)
+        q_emb_1 = self.q_emb(w_emb)
+        q_emb = self.q_emb.forward_all(w_emb) # [batch, q_len, q_dim]
+
+        boxes = b[:,:,:4].transpose(1,2)
+
+        b_emb = [0] * self.glimpse
+        att, logits = self.v_att.forward_all(v, q_emb) # b x g x v x q
+
+        for g in range(self.glimpse):
+            b_emb[g] = self.b_net[g].forward_with_weights(v, q_emb, att[:,g,:,:]) # b x l x h
+            
+            atten, _ = logits[:,g,:,:].max(2)
+            embed = self.counter(boxes, atten)
+
+            q_emb = self.q_prj[g](b_emb[g].unsqueeze(1)) + q_emb
+            q_emb = q_emb + self.c_prj[g](embed).unsqueeze(1)
+
+        logits = self.classifier(q_emb.sum(1))
+
+#         return logits, att, q_emb_1
+        return {'logits': logits,
+               'q_emb': q_emb_1}
+
+class ban_with_qc_cycle(ban_model):
+    def __init__(self,
+                 w_emb,
+                 q_emb,
+                 v_att,
+                 b_net,
+                 q_prj,
+                 c_prj,
+                 classifier,
+                 counter,
+                 op,
+                 gamma,
+                 question_consistency_model=None,
+                 skip_thought=False,
+                 decode_question=False,
+                 attended=False):
+
+        super().__init__(w_emb,
+                         q_emb,
+                         v_att,
+                         b_net,
+                         q_prj,
+                         c_prj,
+                         classifier,
+                         counter,
+                         op,
+                         gamma)
+
+        self.question_consistency = question_consistency_model
+        self.skip_thought = skip_thought
+        self.decode_question = decode_question
+        self.attended = attended
+
+        self.feat_dict = None
+
+    def forward(self,
+                v,
+                b,
+                q,
+                imp_gt_ques,
+                imp_flag,
+                imp_type,
+                input_answers=None, **kwargs):
+        return_dict = super().forward(v, b, q)
+        self.feat_dict = return_dict
+        
+        q_gt_input = (kwargs['batch'],
+                      imp_gt_ques.clone().detach())
+            
+        ques_feat_input = self.feat_dict['q_emb'].clone().detach()
+            
+        qc_return_dict = self.question_consistency(ques_feat_input,
+                                                   return_dict['logits'].clone().detach(),
+                                                   imp_type.clone().detach(),
+                                                   q_gt_input,
+                                                   imp_flag.clone().detach())
+
+        return {'logits': return_dict['logits'],
+                'qc_return_dict': qc_return_dict}

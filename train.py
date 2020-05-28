@@ -131,6 +131,7 @@ if __name__ == '__main__':
     if hasattr(my_model, 'module'):
         model = my_model.module
 
+        
     params = [{'params': model.image_embedding_models_list.parameters(),
                'lr': cfg.optimizer.par.lr},
               {'params': model.question_embedding_models.parameters(),
@@ -143,9 +144,30 @@ if __name__ == '__main__':
     params += [{'params': model.classifier.parameters(),
                 'lr': cfg.optimizer.par.lr}]
 
+    ########## BUTD params #############
+#     params = [{'params': model.w_emb.parameters(),'lr':0.01},
+#               {'params': model.q_emb.parameters(),'lr':0.01},
+#               {'params': model.v_att.parameters(),'lr':0.01},
+#               {'params': model.v_net.parameters(),'lr':0.01},
+#               {'params': model.q_net.parameters(),'lr':0.01},
+#               {'params': model.classifier.parameters(),'lr':0.01}]
+    
+    ########### BAN params ##############
+#     params = [{'params': model.w_emb.parameters(),'lr':0.001},
+#               {'params': model.q_emb.parameters(),'lr':0.001},
+#               {'params': model.v_att.parameters(),'lr':0.001},
+#               {'params': model.b_net.parameters(),'lr':0.001},
+#               {'params': model.q_prj.parameters(),'lr':0.001},
+#               {'params': model.c_prj.parameters(),'lr':0.001},
+#               {'params': model.classifier.parameters(),'lr':0.001},
+#               {'params': model.counter.parameters(),'lr':0.001},
+#               {'params': model.drop.parameters(),'lr':0.001},
+#               {'params': model.tanh.parameters(),'lr':0.001}]
+    
     if cfg['model']['failure_predictor']['hidden_1'] > 0:
         params += [{'params': model.failure_predictor.parameters(),
                     'lr': cfg.training_parameters.fp_lr}]
+    
     if cfg['model']['question_consistency']['hidden_size'] > 0:
         params += [{'params': model.question_consistency.parameters(),
                     'lr': cfg.training_parameters.qc_lr}]
@@ -161,6 +183,7 @@ if __name__ == '__main__':
 
     my_optim = getattr(optim, cfg.optimizer.method)(params,
                                                     **cfg.optimizer.par)
+#     my_model.w_emb.init_embedding('/home1/BTP/pg_aa_1/vqa2.0_glove.6B.300d.txt.npy') ####### added for BUTD and BAN
 
     i_epoch = 0
     i_iter = 0
@@ -193,6 +216,7 @@ if __name__ == '__main__':
 
     data_reader_val = DataLoader(data_set_val, shuffle=False, batch_size=val_bs,
                                  num_workers=cfg.data.num_workers)
+    print('lr: %.4f' % my_optim.param_groups[0]['lr'])
 
     print("BEGIN TRAINING MODEL...")
 

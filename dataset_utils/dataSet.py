@@ -11,7 +11,9 @@ from torch.utils.data import Dataset
 from dataset_utils import text_processing
 import numpy as np
 from global_variables.global_variables import imdb_version
-
+import pickle
+import h5py
+from collections import Counter
 
 class faster_RCNN_feat_reader:
     def read(self, image_feat_path):
@@ -142,6 +144,7 @@ class vqa_dataset(Dataset):
         self.vocab_dict = text_processing.VocabDict(
             data_params['vocab_question_file'])
         self.T_encoder = data_params['T_encoder']
+        self.name = data_params['name']
 
         # read the header of imdb file
         header_idx = 0
@@ -202,6 +205,16 @@ class vqa_dataset(Dataset):
                     self.featDict[feat_file] = image_feats
                     image_count += 1
             print("load %d images" % image_count)
+            
+        ####### Load feature file for BUTD and BAN ##############    
+#         self.img_id2idx = pickle.load(
+#             open(os.path.join('/home1/BTP/pg_aa_1/bottom-up-attention-vqa/data', '%s36_imgid2idx.pkl' % self.name), 'rb'))
+#         print('loading features from h5 file')
+#         h5_path = os.path.join('/home1/BTP/pg_aa_1/bottom-up-attention-vqa/data', '%s36.hdf5' % self.name)
+        
+#         with h5py.File(h5_path, 'r') as hf:
+#             self.features = np.array(hf.get('image_features'))
+#             self.spatials = np.array(hf.get('spatial_features'))
 
     def __len__(self):
         if self.testMode:
@@ -264,7 +277,8 @@ class vqa_dataset(Dataset):
                 answer = iminfo['answer']
             elif 'valid_answers' in iminfo:
                 valid_answers = iminfo['valid_answers']
-                answer = np.random.choice(valid_answers)
+#                 answer = np.random.choice(valid_answers)
+                answer = Counter(valid_answers).most_common(1)[0][0]
                 valid_answers_idx[:len(valid_answers)] = (
                     [self.answer_dict.word2idx(ans) for ans in valid_answers])
                 ans_idx = (
@@ -336,7 +350,7 @@ class vqa_dataset(Dataset):
         if self.load_answer and 'imp_type' in iminfo:
             imp_type = np.array(iminfo['imp_type'][answer][imp_idx], np.float32)
         else:
-            imp_type = np.array([1,0,0], np.float32)
+            imp_type = np.array([0,0,1], np.float32)
             
         ########### Load Flag ########################
         imp_flag = None
@@ -385,6 +399,13 @@ class vqa_dataset(Dataset):
                 feat_key = "image_feat_batch_%s" % str(im_idx)
                 sample[feat_key] = image_feat
 
+        ############# Load features and spatials ###########
+#         image_ft = self.features[self.img_id2idx[sample['image_id']]]
+#         spatials = self.spatials[self.img_id2idx[sample['image_id']]]
+                                 
+#         sample['image_ft'] = image_ft
+#         sample['spatials'] = spatials                         
+
         if image_loc is not None:
             sample['image_dim'] = image_loc
 
@@ -415,7 +436,7 @@ class vqa_dataset(Dataset):
 
         # used for error analysis and debug,
         # output question_id, image_id, question, answer,valid_answers,
-        if self.verbose:
-            sample['verbose_info'] = iminfo
+#         if self.verbose:
+        sample['verbose_info'] = iminfo
             
         return sample
