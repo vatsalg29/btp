@@ -66,6 +66,12 @@ class SentenceDecoder(nn.Module):
                                      nn.Linear(ans_embed_hidden_size, embed_size),
                                      nn.ReLU())
         
+#         self.imp_a_embed = nn.Sequential(nn.ReLU(),
+#                                      nn.Linear(n_ans, ans_embed_hidden_size),
+#                                      nn.ReLU(),
+#                                      nn.Linear(ans_embed_hidden_size, embed_size),
+#                                      nn.ReLU())
+        
         self.imp_a_embed = nn.Linear(3, embed_size)
 
         self.loss_fn = nn.CrossEntropyLoss()
@@ -116,7 +122,7 @@ class SentenceDecoder(nn.Module):
         mixed_feat = self.fuse_features(q, a, imp_knob)
 
         captions = batch_tuple[1]
-        lengths = batch_tuple[0]['seq_length_batch'].clone().detach()
+        lengths = batch_tuple[0]['imp_seq_length_batch'].clone().detach()
         captions = captions.to(self.embed.weight.device)
                 
         # Add <end> token to captions
