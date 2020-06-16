@@ -7,12 +7,13 @@ data:
   - btp/data/detectron_fix_100/fc6/vqa/train2014
   imdb_file_val:
 #   - btp/data/rephrasings/new/imdb/imdb_val2014.npy
+#   - BAN_IC/imdb/imdb_val2014.npy
   - btp/data/imdb/imdb_minival2014.npy
   - btp/data/imdb/imdb_val2train2014.npy
   imdb_file_test:
   - btp/data/imdb/imdb_test2015.npy
   imdb_file_train:
-  - btp/data/imdb_imps/imdb_train2014.npy
+  - btp/data/imdb/imdb_train2014.npy
   image_feat_val:
   - btp/data/detectron_fix_100/fc6/vqa/val2014
   - btp/data/detectron_fix_100/fc6/vqa/val2014
@@ -35,7 +36,7 @@ model:
     vqa_gating: False
     cycle: True
     gating_th: 0.9
-    activation_iter: 5500 
+    activation_iter: 10000 
     hidden_size: 1024
     embed_size: 300
     ans_embed_hidden_size: 1000
@@ -96,13 +97,14 @@ training_parameters:
   clip_norm_mode: all
   lr_ratio: 0.1
   lr_steps:
-  - 10000
-  - 14000
-  - 18000
-  - 22000
-#   - 31000
+#   - 10000
+#   - 14000
+#   - 18000
+#   - 22000
+  - 30000
+  - 55000
   max_grad_l2_norm: 0.25
-  max_iter: 25000
+  max_iter: 60000
   report_interval: 200
   snapshot_interval: 2000
   wu_factor: 0.2

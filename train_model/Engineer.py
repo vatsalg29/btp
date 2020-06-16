@@ -290,18 +290,18 @@ def one_stage_train(
 #                     )
 #                 allowed_indices*= new_flags.cuda()
                 
-#                 if allowed_indices.sum() > -1:
-#                     cycle_vqa_loss = cfg.training_parameters.cc_lambda * loss_criterion(
-#                         cycle_return_dict["logits"][allowed_indices],
-#                         cycle_batch["ans_scores"][allowed_indices].cuda(),
-#                     )
-                    
-                
                 if allowed_indices.sum() > -1:
                     cycle_vqa_loss = cfg.training_parameters.cc_lambda * loss_criterion(
                         cycle_return_dict["logits"][allowed_indices],
-                        cycle_batch["imp_ans_scores"][allowed_indices].cuda(),
+                        cycle_batch["ans_scores"][allowed_indices].cuda(),
                     )
+                    
+                
+#                 if allowed_indices.sum() > -1:
+#                     cycle_vqa_loss = cfg.training_parameters.cc_lambda * loss_criterion(
+#                         cycle_return_dict["logits"][allowed_indices],
+#                         cycle_batch["imp_ans_scores"][allowed_indices].cuda(),
+#                     )
                     
                     # perform backward pass
                     cycle_vqa_loss.sum().backward()
@@ -548,8 +548,8 @@ def one_stage_eval_model(
         images = batch["image_id"]
         orig_answers = batch["answer_label_batch"].data.cpu().numpy()
         imp_answers = batch["imp_answer_label_batch"].data.cpu().numpy()
-        verbose_info = batch['verbose_info']
-        q_ids = verbose_info['question_id'].cpu().numpy()
+#         verbose_info = batch['verbose_info']
+        q_ids = batch['q_id'].cpu().numpy()
         
         for jdx, (q, gtq, oq, img, oa, ia, qid) in enumerate(zip(questions, gt_questions, orig_questions, images, orig_answers, imp_answers, q_ids)):
             gq_dict["annotations"] += [{"image_id": int(img), "imp_ans": ans_vocab[ia], "gen_ques": " ".join(q), "gt_gen_ques": " ".join(gtq), "ques_id": int(qid)}]
@@ -826,7 +826,7 @@ def thresholding(pred, answers, ttype="vanilla", threshold=0.5, return_indices=F
 def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
                         normalize=False):
     input_text_seqs = batch["input_seq_batch"]
-    input_images = batch["image_feat_batch"]
+#     input_images = batch["image_feat_batch"]
     input_txt_variable = Variable(input_text_seqs.type(torch.LongTensor))
     input_txt_variable = input_txt_variable.cuda() if use_cuda else input_txt_variable
     
@@ -856,64 +856,64 @@ def one_stage_run_model(batch, myModel, add_graph=False, log_dir=None,
     imp_type_var = imp_type_var.cuda() if use_cuda else imp_type_var
     
     ########## Load features and spatials for BAN and BUTD ###########
-#     image_ft = batch["image_ft"]
-#     image_ft_var = Variable(image_ft)
-#     image_ft_var = image_ft_var.cuda() if use_cuda else image_ft_var
+    image_ft = batch["image_ft"]
+    image_ft_var = Variable(image_ft)
+    image_ft_var = image_ft_var.cuda() if use_cuda else image_ft_var
     
-#     spatials = batch["spatials"]
-#     spatials_var = Variable(spatials)
-#     spatials_var = spatials_var.cuda() if use_cuda else spatials_var
+    spatials = batch["spatials"]
+    spatials_var = Variable(spatials)
+    spatials_var = spatials_var.cuda() if use_cuda else spatials_var
 
-    if isinstance(input_images, list):
-        input_images = input_images[0]
+#     if isinstance(input_images, list):
+#         input_images = input_images[0]
 
-    image_feat_variable = Variable(input_images)
-    image_feat_variable = (
-        image_feat_variable.cuda() if use_cuda else image_feat_variable
-    )
-    image_feat_variables = [image_feat_variable]
+#     image_feat_variable = Variable(input_images)
+#     image_feat_variable = (
+#         image_feat_variable.cuda() if use_cuda else image_feat_variable
+#     )
+#     image_feat_variables = [image_feat_variable]
 
-    image_dim_variable = None
-    if "image_dim" in batch:
-        image_dims = batch["image_dim"]
-        image_dim_variable = Variable(image_dims, requires_grad=False, volatile=False)
-        image_dim_variable = (
-            image_dim_variable.cuda() if use_cuda else image_dim_variable
-        )
+#     image_dim_variable = None
+#     if "image_dim" in batch:
+#         image_dims = batch["image_dim"]
+#         image_dim_variable = Variable(image_dims, requires_grad=False, volatile=False)
+#         image_dim_variable = (
+#             image_dim_variable.cuda() if use_cuda else image_dim_variable
+#         )
 
 #     check if more than 1 image_feat_batch
-    i = 1
-    image_feat_key = "image_feat_batch_%s"
-    while image_feat_key % str(i) in batch:
-        tmp_image_variable = Variable(batch[image_feat_key % str(i)])
-        tmp_image_variable = (
-            tmp_image_variable.cuda() if use_cuda else tmp_image_variable
-        )
-        image_feat_variables.append(tmp_image_variable)
-        i += 1
+#     i = 1
+#     image_feat_key = "image_feat_batch_%s"
+#     while image_feat_key % str(i) in batch:
+#         tmp_image_variable = Variable(batch[image_feat_key % str(i)])
+#         tmp_image_variable = (
+#             tmp_image_variable.cuda() if use_cuda else tmp_image_variable
+#         )
+#         image_feat_variables.append(tmp_image_variable)
+#         i += 1
 
-    return_dict = myModel(
-        input_question_variable=input_txt_variable,
-        image_dim_variable=image_dim_variable,
-        image_feat_variables=image_feat_variables,
-        imp_gt_ques = imp_seq_variable,
-        imp_gt_ans = imp_ans_variable,
-        imp_flag = imp_flag_var,
-        gt_ans = ans_variable,
-        imp_type = imp_type_var,
-        batch=batch,
-    )
-    
-    ####### for BUTD or BAN model ########
 #     return_dict = myModel(
-#         v=image_ft_var,
-#         b=spatials_var,
-#         q=input_txt_variable,
+#         input_question_variable=input_txt_variable,
+#         image_dim_variable=image_dim_variable,
+#         image_feat_variables=image_feat_variables,
 #         imp_gt_ques = imp_seq_variable,
+#         imp_gt_ans = imp_ans_variable,
 #         imp_flag = imp_flag_var,
+#         gt_ans = ans_variable,
 #         imp_type = imp_type_var,
 #         batch=batch,
 #     )
+    
+    ####### for BUTD or BAN model ########
+    return_dict = myModel(
+        v=image_ft_var,
+        b=spatials_var,
+        q=input_txt_variable,
+        imp_gt_ques = imp_seq_variable,
+        imp_flag = imp_flag_var,
+        imp_type = imp_type_var,
+        batch=batch,
+    )
 
     if add_graph:
         with SummaryWriter(log_dir=log_dir, comment="basicblock") as w:

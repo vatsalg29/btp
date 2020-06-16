@@ -20,7 +20,8 @@ data:
   - btp/data/imdb/imdb_just_impstrain2014.npy
   imdb_file_val:
 #   - btp/data/rephrasings/new/imdb/imdb_val2014.npy
-  - btp/data/imdb/imdb_val2014.npy
+  - BAN_finetuned/imdb/imdb_val2014.npy
+#   - btp/data/imdb/imdb_val2014.npy
 #   - btp/data/imdb/imdb_just_impsval2train2014.npy
 #   - btp/data/imdb/imdb_just_impsminival2014.npy
   num_workers: 5

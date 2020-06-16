@@ -209,7 +209,7 @@ class vqa_multi_modal_with_qc_cycle(vqa_multi_modal_model):
         ############### QG ########## (Passing Q and A' as info and A_imp_gt as answer and Q_imp_gt to compare with)
         qc_return_dict = self.question_consistency(ques_feat_input,
                                                    return_dict['logits'].clone().detach(),
-                                                   imp_gt_ans.clone().detach(),
+                                                   imp_type.clone().detach(),
                                                    q_gt_input,
                                                    imp_flag.clone().detach())
 
@@ -298,7 +298,8 @@ class butd_model(nn.Module):
         logits = self.classifier(joint_repr)
 #         return logits,q_emb, v_emb
         return {'logits': logits,
-               'q_emb': q_emb}
+               'q_emb': q_emb,
+               'v_emb': v_emb}
     
 class butd_with_qc_cycle(butd_model):
     def __init__(self,
@@ -338,16 +339,24 @@ class butd_with_qc_cycle(butd_model):
         return_dict = super().forward(v, b, q)
         self.feat_dict = return_dict
         
-        q_gt_input = (kwargs['batch'],
-                      imp_gt_ques.clone().detach())
+#         q_gt_input = (kwargs['batch'],
+#                       imp_gt_ques.clone().detach())
             
         ques_feat_input = self.feat_dict['q_emb'].clone().detach()
-            
-        qc_return_dict = self.question_consistency(ques_feat_input,
+        
+        ######## Original
+        img_feat_input = self.feat_dict['v_emb'].clone().detach()
+        q_gt_input = (kwargs['batch'], q.clone().detach())
+        qc_return_dict = self.question_consistency(img_feat_input,
                                                    return_dict['logits'].clone().detach(),
-                                                   imp_type.clone().detach(),
                                                    q_gt_input,
                                                    imp_flag.clone().detach())
+            
+#         qc_return_dict = self.question_consistency(ques_feat_input,
+#                                                    return_dict['logits'].clone().detach(),
+#                                                    imp_type.clone().detach(),
+#                                                    q_gt_input,
+#                                                    imp_flag.clone().detach())
 
         return {'logits': return_dict['logits'],
                 'qc_return_dict': qc_return_dict}
@@ -447,10 +456,20 @@ class ban_with_qc_cycle(ban_model):
         return_dict = super().forward(v, b, q)
         self.feat_dict = return_dict
         
+#         q_gt_input = (kwargs['batch'],
+#                       self.model_intermediates['question_input'].clone().detach())
+        
         q_gt_input = (kwargs['batch'],
                       imp_gt_ques.clone().detach())
             
         ques_feat_input = self.feat_dict['q_emb'].clone().detach()
+        
+         ######## Original #######
+
+#         qc_return_dict = self.question_consistency(img_feat_input,
+#                                                    return_dict['logits'].clone().detach(),
+#                                                    q_gt_input,
+#                                                    imp_flag.clone().detach())
             
         qc_return_dict = self.question_consistency(ques_feat_input,
                                                    return_dict['logits'].clone().detach(),

@@ -132,25 +132,25 @@ if __name__ == '__main__':
         model = my_model.module
 
         
-    params = [{'params': model.image_embedding_models_list.parameters(),
-               'lr': cfg.optimizer.par.lr},
-              {'params': model.question_embedding_models.parameters(),
-               'lr': cfg.optimizer.par.lr},
-              {'params': model.multi_modal_combine.parameters(),
-               'lr': cfg.optimizer.par.lr},
-              {'params': model.image_feature_encode_list.parameters(),
-               'lr': cfg.optimizer.par.lr}]
+#     params = [{'params': model.image_embedding_models_list.parameters(),
+#                'lr': cfg.optimizer.par.lr},
+#               {'params': model.question_embedding_models.parameters(),
+#                'lr': cfg.optimizer.par.lr},
+#               {'params': model.multi_modal_combine.parameters(),
+#                'lr': cfg.optimizer.par.lr},
+#               {'params': model.image_feature_encode_list.parameters(),
+#                'lr': cfg.optimizer.par.lr}]
 
-    params += [{'params': model.classifier.parameters(),
-                'lr': cfg.optimizer.par.lr}]
+#     params += [{'params': model.classifier.parameters(),
+#                 'lr': cfg.optimizer.par.lr}]
 
     ########## BUTD params #############
-#     params = [{'params': model.w_emb.parameters(),'lr':0.01},
-#               {'params': model.q_emb.parameters(),'lr':0.01},
-#               {'params': model.v_att.parameters(),'lr':0.01},
-#               {'params': model.v_net.parameters(),'lr':0.01},
-#               {'params': model.q_net.parameters(),'lr':0.01},
-#               {'params': model.classifier.parameters(),'lr':0.01}]
+    params = [{'params': model.w_emb.parameters(),'lr':0.01},
+              {'params': model.q_emb.parameters(),'lr':0.01},
+              {'params': model.v_att.parameters(),'lr':0.01},
+              {'params': model.v_net.parameters(),'lr':0.01},
+              {'params': model.q_net.parameters(),'lr':0.01},
+              {'params': model.classifier.parameters(),'lr':0.01}]
     
     ########### BAN params ##############
 #     params = [{'params': model.w_emb.parameters(),'lr':0.001},
