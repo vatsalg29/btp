@@ -209,7 +209,7 @@ class vqa_multi_modal_with_qc_cycle(vqa_multi_modal_model):
         ############### QG ########## (Passing Q and A' as info and A_imp_gt as answer and Q_imp_gt to compare with)
         qc_return_dict = self.question_consistency(ques_feat_input,
                                                    return_dict['logits'].clone().detach(),
-                                                   imp_gt_ans.clone().detach(),
+                                                   imp_type.clone().detach(),
                                                    q_gt_input,
                                                    imp_flag.clone().detach())
 

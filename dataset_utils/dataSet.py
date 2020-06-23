@@ -207,14 +207,14 @@ class vqa_dataset(Dataset):
             print("load %d images" % image_count)
             
         ####### Load feature file for BUTD and BAN ##############    
-#         self.img_id2idx = pickle.load(
-#             open(os.path.join('/home1/BTP/pg_aa_1/bottom-up-attention-vqa/data', '%s36_imgid2idx.pkl' % self.name), 'rb'))
-#         print('loading features from h5 file')
-#         h5_path = os.path.join('/home1/BTP/pg_aa_1/bottom-up-attention-vqa/data', '%s36.hdf5' % self.name)
+        self.img_id2idx = pickle.load(
+            open(os.path.join('/home1/BTP/pg_aa_1/bottom-up-attention-vqa/data', '%s36_imgid2idx.pkl' % self.name), 'rb'))
+        print('loading features from h5 file')
+        h5_path = os.path.join('/home1/BTP/pg_aa_1/bottom-up-attention-vqa/data', '%s36.hdf5' % self.name)
         
-#         with h5py.File(h5_path, 'r') as hf:
-#             self.features = np.array(hf.get('image_features'))
-#             self.spatials = np.array(hf.get('spatial_features'))
+        with h5py.File(h5_path, 'r') as hf:
+            self.features = np.array(hf.get('image_features'))
+            self.spatials = np.array(hf.get('spatial_features'))
 
     def __len__(self):
         if self.testMode:
@@ -307,8 +307,8 @@ class vqa_dataset(Dataset):
             implied_seq[:imp_read_len] = imp_question_inds[:imp_read_len]
 
         image_file_name = self.imdb[idx]['feature_path']
-        image_feats, image_boxes, image_loc = (
-            self._get_image_features_(image_file_name))
+#         image_feats, image_boxes, image_loc = (
+#             self._get_image_features_(image_file_name))
         
         ################ Load Implied Answer ##################
         imp_answer = None
@@ -392,22 +392,22 @@ class vqa_dataset(Dataset):
             id_start_index = image_file_name.find('4_') + 2
             sample['image_id'] = int(image_file_name[id_start_index:-4])
 
-        for im_idx, image_feat in enumerate(image_feats):
-            if im_idx == 0:
-                sample['image_feat_batch'] = image_feat
-            else:
-                feat_key = "image_feat_batch_%s" % str(im_idx)
-                sample[feat_key] = image_feat
+#         for im_idx, image_feat in enumerate(image_feats):
+#             if im_idx == 0:
+#                 sample['image_feat_batch'] = image_feat
+#             else:
+#                 feat_key = "image_feat_batch_%s" % str(im_idx)
+#                 sample[feat_key] = image_feat
 
         ############# Load features and spatials ###########
-#         image_ft = self.features[self.img_id2idx[sample['image_id']]]
-#         spatials = self.spatials[self.img_id2idx[sample['image_id']]]
+        image_ft = self.features[self.img_id2idx[sample['image_id']]]
+        spatials = self.spatials[self.img_id2idx[sample['image_id']]]
                                  
-#         sample['image_ft'] = image_ft
-#         sample['spatials'] = spatials                         
+        sample['image_ft'] = image_ft
+        sample['spatials'] = spatials                         
 
-        if image_loc is not None:
-            sample['image_dim'] = image_loc
+#         if image_loc is not None:
+#             sample['image_dim'] = image_loc
 
         if self.load_answer:
             sample['answer_label_batch'] = answer_idx
@@ -424,8 +424,8 @@ class vqa_dataset(Dataset):
             sample['imp_valid_ans_label_batch'] = imp_valid_answers_idx
             sample['imp_ans_scores'] = imp_answer_scores
 
-        if image_boxes is not None:
-            sample['image_boxes'] = image_boxes
+#         if image_boxes is not None:
+#             sample['image_boxes'] = image_boxes
             
         ############# Store Flag #################
         if imp_flag is not None:
