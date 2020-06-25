@@ -415,7 +415,7 @@ class vqa_dataset(Dataset):
 
         # used for error analysis and debug,
         # output question_id, image_id, question, answer,valid_answers,
-        if self.verbose:
-            sample['verbose_info'] = iminfo
+#         if self.verbose:
+        sample['verbose_info'] = iminfo
             
         return sample

@@ -6,15 +6,17 @@ data:
   image_feat_train:
   - btp/data/detectron_fix_100/fc6/vqa/train2014
   imdb_file_val:
-  - btp/data/imdb/imdb_minival2014.npy
-  - btp/data/imdb/imdb_val2train2014.npy
+#   - btp/data/imdb_just_imps/imdb_val2014.npy
+#   - btp/data/rephrasings/new/imdb/imdb_val2014.npy
+  - btp/data/imdb/imdb_val2014.npy
+#   - btp/data/imdb/imdb_val2train2014.npy
   imdb_file_test:
   - btp/data/imdb/imdb_test2015.npy
   imdb_file_train:
   - btp/data/imdb_imps/imdb_train2014.npy
   image_feat_val:
   - btp/data/detectron_fix_100/fc6/vqa/val2014
-  - btp/data/detectron_fix_100/fc6/vqa/val2014
+#   - btp/data/detectron_fix_100/fc6/vqa/val2014
   image_feat_test:
   - btp/data/detectron_fix_100/fc6/vqa/test2015
   image_fast_reader: False

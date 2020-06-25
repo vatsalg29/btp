@@ -19,7 +19,8 @@ data:
   - btp/data/imdb/imdb_train2014.npy
   - btp/data/imdb/imdb_just_impstrain2014.npy
   imdb_file_val:
-  - finetuned_pythia_2/imdb/imdb_val2014.npy
+  - btp/data/imdb_just_imps/imdb_val2014.npy
+#   - btp/data/rephrasings/new/imdb/imdb_val2014.npy
 #   - btp/data/imdb/imdb_val2train2014.npy
   num_workers: 5
   question_max_len: 14

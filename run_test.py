@@ -82,7 +82,7 @@ if __name__ == '__main__':
         
     else:    
         if args.use_val:
-            acc, ns, _ = one_stage_eval_model(data_reader_test, my_model)
+            acc, ns, _ = one_stage_eval_model(data_reader_test, my_model, i_iter = 50000, log_dir='/home1/BTP/pg_aa_1/btp/boards/pythia_cycle_consistent/3014/')
             print("Validation accuracy : %.6f" % acc)
 
     print("DONE")

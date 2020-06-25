@@ -101,6 +101,7 @@ class vqa_multi_modal_model(nn.Module):
              to number of image features"
 
         image_embeddings = []
+        attention_maps = []
         for i, image_feat_variable in enumerate(image_feat_variables):
             image_dim_variable_use = None if i > 0 else image_dim_variable
             image_feat_variable_ft = (
@@ -108,13 +109,15 @@ class vqa_multi_modal_model(nn.Module):
 
             image_embedding_models_i = self.image_embedding_models_list[i]
             for i_model in image_embedding_models_i:
-                i_embedding = i_model(
+                i_embedding,i_attmap = i_model(
                     image_feat_variable_ft,
                     question_embedding_total, image_dim_variable_use)
                 image_embeddings.append(i_embedding)
-
+                attention_maps.append(i_attmap)
+                
         image_embedding_total = torch.cat(image_embeddings, dim=1)
-
+        attention_maps_total = torch.cat(attention_maps, dim=1)
+        
         if self.inter_model is not None:
             image_embedding_total = self.inter_model(image_embedding_total)
 
@@ -131,7 +134,7 @@ class vqa_multi_modal_model(nn.Module):
         if isinstance(class_out, dict):
             return class_out
 
-        return {'logits': class_out}
+        return {'logits': class_out, 'attention': attention_maps_total}
 
 
 class vqa_multi_modal_with_qc_cycle(vqa_multi_modal_model):
@@ -214,6 +217,7 @@ class vqa_multi_modal_with_qc_cycle(vqa_multi_modal_model):
                                                    imp_flag.clone().detach())
 
         return {'logits': return_dict['logits'],
+                'attention' : return_dict['attention'],
                 'qc_return_dict': qc_return_dict}
 
 

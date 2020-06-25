@@ -530,29 +530,36 @@ def one_stage_eval_model(
     # Make dict to store generated questions
     gq_dict = {"annotations": [], "ques_answers": []}
 
-    def store_questions(sampled_ids, batch):
-        sampled_ids = sampled_ids.data.cpu().numpy()
-        orig_q = batch["input_seq_batch"].data.cpu().numpy()
-        orig_questions = [
-            [vocab[idx] for idx in orig_q[j]] for j in range(len(orig_q))
-        ]
-        questions = [
-            [vocab[idx] for idx in sampled_ids[j]] for j in range(len(sampled_ids))
-        ]
-        gt_q = batch["imp_seq_batch"].data.cpu().numpy()
-        gt_questions = [
-            [vocab[idx] for idx in gt_q[j]] for j in range(len(gt_q))
-        ]
-        images = batch["image_id"]
-        orig_answers = batch["answer_label_batch"].data.cpu().numpy()
-        imp_answers = batch["imp_answer_label_batch"].data.cpu().numpy()
-#         verbose_info = batch['verbose_info']
-#         q_ids = verbose_info['question_id'].cpu().numpy()
+    def store_questions(att, batch, sampled_ids = None):
         
-        for jdx, (q, gtq, oq, img, oa, ia) in enumerate(zip(questions, gt_questions, orig_questions, images, orig_answers, imp_answers)):
-            gq_dict["annotations"] += [{"image_id": int(img), "imp_ans": ans_vocab[ia], "gen_ques": " ".join(q), "gt_gen_ques": " ".join(gtq)}]
-            gq_dict["ques_answers"] += [{"image_id": int(img), "orig_ques": " ".join(oq), "orig_ans": ans_vocab[oa]}]
+        images = batch["image_id"]
+        att = att.data.cpu().numpy()
+        
+        orig_q = batch["input_seq_batch"].data.cpu().numpy()
+        orig_questions = [[vocab[idx] for idx in orig_q[j]] for j in range(len(orig_q))]
+        
+        orig_answers = batch["answer_label_batch"].data.cpu().numpy()
+        verbose_info = batch['verbose_info']
+        q_ids = verbose_info['question_id'].cpu().numpy()
+        
+        for jdx, (oq, img, oa,qid, at) in enumerate(zip( orig_questions, images, orig_answers,q_ids, att)):
+            gq_dict["ques_answers"] += [{"image_id": int(img), "orig_ques": " ".join(oq), "orig_ans": ans_vocab[oa],
+                                         "attention": at, "ques_id": int(qid)}]
 
+        
+        if sampled_ids is not None:
+            sampled_ids = sampled_ids.data.cpu().numpy()
+            questions = [[vocab[idx] for idx in sampled_ids[j]] for j in range(len(sampled_ids))]
+            gt_q = batch["imp_seq_batch"].data.cpu().numpy()
+            gt_questions = [[vocab[idx] for idx in gt_q[j]] for j in range(len(gt_q))]
+        
+            imp_answers = batch["imp_answer_label_batch"].data.cpu().numpy()
+       
+            for jdx, (q, gtq,img,ia, qid) in enumerate(zip(questions, gt_questions, images, imp_answers, q_ids)):
+                gq_dict["annotations"] += [{"image_id": int(img), "imp_ans": ans_vocab[ia], "gen_ques": " ".join(q),
+                                            "gt_gen_ques": " ".join(gtq), "ques_id": int(qid)}]
+            
+        
     confusion_mat = (
         np.zeros((len(threshold), 2, 2))
         if type(threshold) == list
@@ -586,9 +593,10 @@ def one_stage_eval_model(
             _return_dict = one_stage_run_model(batch, myModel)
             logit_res = _return_dict["logits"]
             qc_return_dict = _return_dict["qc_return_dict"]
+            att = _return_dict['attention']
             if "sampled_ids" in qc_return_dict.keys():
                 sampled_ids = qc_return_dict["sampled_ids"]
-                store_questions(sampled_ids, batch)
+                store_questions(att, batch, sampled_ids)
 
         elif is_question_consistency and is_failure_prediction:
             _return_dict = one_stage_run_model(batch, myModel)
@@ -600,8 +608,11 @@ def one_stage_eval_model(
                 sampled_ids = qc_return_dict["sampled_ids"]
                 store_questions(sampled_ids, batch)
         else:
-            logit_res = one_stage_run_model(batch, myModel)["logits"]
-
+            _return_dict = one_stage_run_model(batch, myModel)
+            logit_res = _return_dict["logits"]
+            att = _return_dict['attention']
+            store_questions(att, batch)
+                
         predicted_scores = torch.sum(
             compute_score_with_logits(logit_res, answer_scores)
         )
@@ -655,29 +666,8 @@ def one_stage_eval_model(
 
     gc.collect()
 
-    if is_question_consistency and log_dir is not None:
+    if log_dir is not None:
         np.save(os.path.join(log_dir, "gq_{}.npy".format(i_iter)), np.array(gq_dict))
-
-    if is_failure_prediction:
-        print("validation" + "=" * 45)
-        print_classification_report(confusion_mat, threshold=0.0)
-        print("=" * 55)
-
-#     else:
-#         if not type(threshold) == list:
-#             print_classification_report(confusion_mat, threshold)
-
-#         else:
-#             for _th_idx, _th in enumerate(threshold):
-#                 print_classification_report(confusion_mat[_th_idx], _th)
-
-    if return_cm:
-        return (
-            val_score_tot / val_sample_tot,
-            upbound_tot / val_sample_tot,
-            val_sample_tot,
-            confusion_mat,
-        )
 
     return val_score_tot / val_sample_tot, upbound_tot / val_sample_tot, val_sample_tot
 

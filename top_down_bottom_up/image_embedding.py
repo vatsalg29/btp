@@ -43,7 +43,7 @@ class image_embedding(nn.Module):
         batch_size = att_reshape.size(0)
         image_embedding = tmp_embedding.view(batch_size, -1)
 
-        return image_embedding
+        return image_embedding, attention #return attention_maps too!
 
 
 class image_finetune(nn.Module):
